@@ -1,0 +1,5 @@
+[console_scripts]
+rag-chatbox = rag_chatbox.cli:run_cli
+rag-ft-eval = training.cli:eval_main
+rag-ft-export = training.cli:export_main
+rag-ft-train = training.cli:train_main
