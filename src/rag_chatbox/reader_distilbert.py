@@ -80,27 +80,18 @@ class DistilBertOnnxReader:
         start_idx = next((idx for idx, name in enumerate(output_names) if "start" in name), 0)
         end_idx = next((idx for idx, name in enumerate(output_names) if "end" in name), 1 if len(outputs) > 1 else 0)
 
-        start_logits = outputs[start_idx][0]
-        end_logits = outputs[end_idx][0]
+        start_logits = outputs[start_idx]
+        end_logits = outputs[end_idx]
         return start_logits, end_logits
 
-    def _run_single(self, question: str, context: str) -> tuple[str, float, float, float]:
-        encoding = self.tokenizer(
-            question,
-            context,
-            max_length=self.max_length,
-            truncation=True,
-            padding="max_length",
-            return_offsets_mapping=True,
-            return_tensors="np",
-        )
-
-        outputs = self.session.run(None, self._build_input_feed(encoding))
-        start_logits, end_logits = self._extract_start_end_logits(outputs)
-
-        offset_mapping = encoding["offset_mapping"][0]
-        sequence_ids = encoding.sequence_ids(0)
-
+    def _best_span_from_logits(
+        self,
+        start_logits: np.ndarray,
+        end_logits: np.ndarray,
+        offset_mapping: np.ndarray,
+        sequence_ids: list[int | None],
+        context: str,
+    ) -> tuple[str, float, float, float]:
         start_indexes = np.argsort(start_logits)[-self.n_best_size :][::-1]
         end_indexes = np.argsort(end_logits)[-self.n_best_size :][::-1]
 
@@ -139,11 +130,59 @@ class DistilBertOnnxReader:
         answer_text = context[start_char:end_char].strip()
         return answer_text, best_score, float(start_logits[start_idx]), float(end_logits[end_idx])
 
+    def _run_pairs(self, questions: list[str], contexts: list[str]) -> list[tuple[str, float, float, float]]:
+        if len(questions) != len(contexts):
+            raise ValueError("questions and contexts must have the same length")
+        if not questions:
+            return []
+
+        encoding = self.tokenizer(
+            questions,
+            contexts,
+            max_length=self.max_length,
+            truncation=True,
+            padding="max_length",
+            return_offsets_mapping=True,
+            return_tensors="np",
+        )
+
+        outputs = self.session.run(None, self._build_input_feed(encoding))
+        start_logits, end_logits = self._extract_start_end_logits(outputs)
+
+        results: list[tuple[str, float, float, float]] = []
+        for idx, context in enumerate(contexts):
+            results.append(
+                self._best_span_from_logits(
+                    start_logits=start_logits[idx],
+                    end_logits=end_logits[idx],
+                    offset_mapping=encoding["offset_mapping"][idx],
+                    sequence_ids=encoding.sequence_ids(idx),
+                    context=context,
+                )
+            )
+        return results
+
+    def _run_single(self, question: str, context: str) -> tuple[str, float, float, float]:
+        return self._run_pairs([question], [context])[0]
+
+    def answer_on_question_context_pairs(
+        self,
+        questions: list[str],
+        contexts: list[str],
+    ) -> list[tuple[str, float, float, float]]:
+        return self._run_pairs(questions, contexts)
+
     def answer_on_documents(self, question: str, docs: list[Any]) -> list[ReaderAnswer]:
         ranked: list[ReaderAnswer] = []
-        for doc in docs:
+        use_batch = hasattr(self, "tokenizer") and hasattr(self, "session")
+        if use_batch:
+            contexts = [doc.page_content or "" for doc in docs]
+            predictions = self._run_pairs([question] * len(contexts), contexts) if contexts else []
+        else:
+            predictions = [self._run_single(question=question, context=(doc.page_content or "")) for doc in docs]
+
+        for doc, (answer, span_score, start_score, end_score) in zip(docs, predictions):
             context = doc.page_content or ""
-            answer, span_score, start_score, end_score = self._run_single(question=question, context=context)
             source = str(doc.metadata.get("source", "Unknown"))
             raw_page = doc.metadata.get("page_number", doc.metadata.get("page"))
             if isinstance(raw_page, int):

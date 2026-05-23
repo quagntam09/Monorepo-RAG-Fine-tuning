@@ -62,6 +62,50 @@ class TestRetrievalThreshold(unittest.TestCase):
         self.assertEqual(len(results), 2)
         self.assertEqual(results[0].metadata["source"], "b.pdf")
         self.assertIn("question rewrite", vectorstore.calls)
+        self.assertIsNotNone(retriever.last_trace)
+        self.assertEqual(retriever.last_trace["decision"], "selected_top_k_by_rerank")
+        self.assertIn("chunk_preview", retriever.last_trace["selected"][0])
+
+    def test_retrieval_cache_reuses_previous_result(self):
+        doc = Document(page_content="relevant", metadata={"source": "demo.pdf", "page": 0})
+        vectorstore = FakeVectorstore([(doc, 0.9)])
+        retriever = _make_retrieval_fn(
+            vectorstore,
+            AppConfig(score_threshold=0.5, top_k=5, fetch_k=5, retrieval_cache_ttl_sec=30.0),
+        )
+
+        first = retriever("question")
+        second = retriever("question")
+        self.assertEqual(len(first), 1)
+        self.assertEqual(len(second), 1)
+        self.assertEqual(len(vectorstore.calls), 1)
+        self.assertTrue(retriever.last_trace["retrieval_cache_hit"])
+
+    def test_query_rewrite_cache_avoids_rewriter_recompute(self):
+        doc = Document(page_content="alpha content", metadata={"source": "a.pdf", "page": 0})
+        vectorstore = FakeVectorstore(query_map={"question": [(doc, 0.9)]})
+        calls = {"rewriter": 0}
+
+        def query_rewriter(_q: str):
+            calls["rewriter"] += 1
+            return ["question"]
+
+        retriever = _make_retrieval_fn(
+            vectorstore,
+            AppConfig(
+                score_threshold=0.5,
+                top_k=5,
+                fetch_k=5,
+                query_rewrite_max_variants=2,
+                query_rewrite_cache_ttl_sec=30.0,
+                retrieval_cache_ttl_sec=0.0,
+            ),
+            query_rewriter=query_rewriter,
+        )
+
+        retriever("question")
+        retriever("question")
+        self.assertEqual(calls["rewriter"], 1)
 
 
 class TestQueryRewriteParsing(unittest.TestCase):

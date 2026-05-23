@@ -4,8 +4,12 @@ import hashlib
 import json
 import logging
 import re
+import time
+from collections import OrderedDict
+from copy import deepcopy
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Generic, TypeVar
 
 from langchain_core.documents import Document
 from langchain_community.vectorstores import FAISS
@@ -25,6 +29,55 @@ Return ONLY a JSON array of short rewritten search queries in the same language 
 
 Question: {question}
 JSON:"""
+
+T = TypeVar("T")
+
+
+@dataclass
+class _CacheEntry(Generic[T]):
+    value: T
+    expires_at: float
+
+
+class _TTLCache(Generic[T]):
+    def __init__(self, ttl_seconds: float, max_size: int) -> None:
+        self.ttl_seconds = max(0.0, float(ttl_seconds))
+        self.max_size = max(1, int(max_size))
+        self._items: OrderedDict[str, _CacheEntry[T]] = OrderedDict()
+
+    def get(self, key: str) -> T | None:
+        if self.ttl_seconds <= 0:
+            return None
+
+        now = time.monotonic()
+        entry = self._items.get(key)
+        if entry is None:
+            return None
+        if entry.expires_at <= now:
+            self._items.pop(key, None)
+            return None
+
+        self._items.move_to_end(key)
+        return entry.value
+
+    def set(self, key: str, value: T) -> None:
+        if self.ttl_seconds <= 0:
+            return
+
+        now = time.monotonic()
+        self._items[key] = _CacheEntry(value=value, expires_at=now + self.ttl_seconds)
+        self._items.move_to_end(key)
+
+        while len(self._items) > self.max_size:
+            self._items.popitem(last=False)
+
+    def cleanup(self) -> None:
+        if not self._items:
+            return
+        now = time.monotonic()
+        expired = [key for key, entry in self._items.items() if entry.expires_at <= now]
+        for key in expired:
+            self._items.pop(key, None)
 
 
 def _build_embeddings(config: AppConfig) -> OllamaEmbeddings:
@@ -193,34 +246,140 @@ def _doc_key(doc: Document) -> tuple[str, str, str, str]:
     return source, page, start_index, content_hash
 
 
+def _doc_source_page(doc: Document) -> tuple[str, str]:
+    source = str(doc.metadata.get("source", "Unknown"))
+    raw_page = doc.metadata.get("page_number", doc.metadata.get("page"))
+    if isinstance(raw_page, int):
+        page = str(raw_page + 1)
+    elif raw_page is None:
+        page = "N/A"
+    else:
+        page = str(raw_page)
+    return source, page
+
+
+def _preview(text: str, limit: int = 180) -> str:
+    flattened = " ".join((text or "").split())
+    if len(flattened) <= limit:
+        return flattened
+    return flattened[: max(0, limit - 3)].rstrip() + "..."
+
+
+def _normalize_cache_key(text: str) -> str:
+    return " ".join((text or "").strip().casefold().split())
+
+
+def _clone_docs(docs: list[Document]) -> list[Document]:
+    return [Document(page_content=doc.page_content, metadata=deepcopy(doc.metadata)) for doc in docs]
+
+
 def _make_retrieval_fn(
     vectorstore: FAISS,
     config: AppConfig,
     query_rewriter: Callable[[str], list[str]] | None = None,
 ) -> Callable[[str], list[Document]]:
+    query_rewrite_cache = _TTLCache[list[str]](
+        ttl_seconds=float(getattr(config, "query_rewrite_cache_ttl_sec", 30.0)),
+        max_size=int(getattr(config, "query_rewrite_cache_max_size", 512)),
+    )
+    retrieval_cache = _TTLCache[tuple[list[Document], dict[str, Any]]](
+        ttl_seconds=float(getattr(config, "retrieval_cache_ttl_sec", 15.0)),
+        max_size=int(getattr(config, "retrieval_cache_max_size", 256)),
+    )
+
     def retrieve(question: str) -> list[Document]:
+        question = (question or "").strip()
+        cache_key = _normalize_cache_key(question)
+        cached = retrieval_cache.get(cache_key) if cache_key else None
+        if cached is not None:
+            cached_docs, cached_trace = cached
+            trace = dict(cached_trace)
+            trace["retrieval_cache_hit"] = True
+            retrieve.last_trace = trace
+            return _clone_docs(cached_docs)
+
         queries = [question]
+        rewritten_queries: list[str] = []
+        query_rewrite_cache_hit = False
         if query_rewriter is not None:
-            rewritten = query_rewriter(question)
+            rewritten = query_rewrite_cache.get(cache_key) if cache_key else None
+            if rewritten is None:
+                rewritten = query_rewriter(question)
+                if cache_key:
+                    query_rewrite_cache.set(cache_key, list(rewritten or []))
+            else:
+                query_rewrite_cache_hit = True
+            rewritten_queries = list(rewritten or [])
             queries = _dedupe_non_empty(rewritten if rewritten else [question], limit=config.query_rewrite_max_variants + 1)
             if question.strip():
                 queries = _dedupe_non_empty([question, *queries], limit=config.query_rewrite_max_variants + 1)
 
         merged: dict[tuple[str, str, str, str], tuple[Document, float]] = {}
+        candidates_debug: list[dict[str, Any]] = []
         for q in queries:
             candidates = vectorstore.similarity_search_with_relevance_scores(q, k=config.fetch_k)
             for doc, rel_score in candidates:
+                source, page = _doc_source_page(doc)
                 if rel_score < config.score_threshold:
+                    candidates_debug.append(
+                        {
+                            "query": q,
+                            "source": source,
+                            "page": page,
+                            "chunk_preview": _preview(doc.page_content, limit=120),
+                            "relevance_score": float(rel_score),
+                            "overlap_score": 0.0,
+                            "rerank_score": 0.0,
+                            "passed_threshold": False,
+                            "selected": False,
+                            "decision": "filtered_by_score_threshold",
+                        }
+                    )
                     continue
                 overlap = _overlap_score(question, doc.page_content)
                 rerank_score = (0.8 * rel_score) + (0.2 * overlap)
+                doc.metadata["retrieval_relevance_score"] = float(rel_score)
+                doc.metadata["retrieval_overlap_score"] = float(overlap)
                 key = _doc_key(doc)
                 previous = merged.get(key)
+                decision = "kept_for_rerank"
                 if previous is None or rerank_score > previous[1]:
                     doc.metadata["matched_query"] = q
                     merged[key] = (doc, rerank_score)
+                    if previous is not None:
+                        decision = "replaced_previous_with_higher_rerank"
+                else:
+                    decision = "discarded_lower_rerank_than_existing"
+
+                candidates_debug.append(
+                    {
+                        "query": q,
+                        "source": source,
+                        "page": page,
+                        "chunk_preview": _preview(doc.page_content, limit=120),
+                        "relevance_score": float(rel_score),
+                        "overlap_score": float(overlap),
+                        "rerank_score": float(rerank_score),
+                        "passed_threshold": True,
+                        "selected": False,
+                        "decision": decision,
+                    }
+                )
 
         if not merged:
+            retrieve.last_trace = {
+                "question": question,
+                "queries_used": queries,
+                "rewritten_queries": rewritten_queries,
+                "score_threshold": float(config.score_threshold),
+                "fetch_k": int(config.fetch_k),
+                "top_k": int(config.top_k),
+                "candidates": candidates_debug,
+                "selected": [],
+                "decision": "no_chunks_after_threshold_filter",
+                "query_rewrite_cache_hit": query_rewrite_cache_hit,
+                "retrieval_cache_hit": False,
+            }
             logger.info(
                 "No retrieved chunks cleared score threshold for question=%r",
                 question,
@@ -230,11 +389,53 @@ def _make_retrieval_fn(
         filtered = list(merged.values())
         filtered.sort(key=lambda x: x[1], reverse=True)
         selected: list[Document] = []
+        selected_debug: list[dict[str, Any]] = []
         for doc, score in filtered[: config.top_k]:
             doc.metadata["rerank_score"] = float(score)
             selected.append(doc)
+            source, page = _doc_source_page(doc)
+            selected_debug.append(
+                {
+                    "source": source,
+                    "page": page,
+                    "matched_query": str(doc.metadata.get("matched_query", "")),
+                    "chunk_preview": _preview(doc.page_content, limit=180),
+                    "relevance_score": float(doc.metadata.get("retrieval_relevance_score", 0.0)),
+                    "overlap_score": float(doc.metadata.get("retrieval_overlap_score", 0.0)),
+                    "rerank_score": float(score),
+                }
+            )
+
+        for item in candidates_debug:
+            for selected_item in selected_debug:
+                if (
+                    item["source"] == selected_item["source"]
+                    and item["page"] == selected_item["page"]
+                    and item["query"] == selected_item["matched_query"]
+                ):
+                    item["selected"] = True
+                    break
+
+        retrieve.last_trace = {
+            "question": question,
+            "queries_used": queries,
+            "rewritten_queries": rewritten_queries,
+            "score_threshold": float(config.score_threshold),
+            "fetch_k": int(config.fetch_k),
+            "top_k": int(config.top_k),
+            "candidates": candidates_debug,
+            "selected": selected_debug,
+            "decision": "selected_top_k_by_rerank",
+            "query_rewrite_cache_hit": query_rewrite_cache_hit,
+            "retrieval_cache_hit": False,
+        }
+        if cache_key:
+            retrieval_cache.set(cache_key, (_clone_docs(selected), dict(retrieve.last_trace)))
+            query_rewrite_cache.cleanup()
+            retrieval_cache.cleanup()
         return selected
 
+    retrieve.last_trace = None
     return retrieve
 
 

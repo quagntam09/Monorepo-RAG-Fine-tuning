@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
 import json
 import re
 from pathlib import Path
@@ -159,7 +160,10 @@ def evaluate_eval_set(
     top_k: int = 5,
     limit: int = 0,
 ) -> dict[str, Any]:
-    retriever, reader, chatbot = _build_components(config, include_chatbot=mode == "rag")
+    runtime_top_k = max(1, int(top_k))
+    runtime_fetch_k = max(int(config.fetch_k), runtime_top_k)
+    runtime_config = replace(config, top_k=runtime_top_k, fetch_k=runtime_fetch_k)
+    retriever, reader, chatbot = _build_components(runtime_config, include_chatbot=mode == "rag")
     questions = load_questions(Path(eval_file))
     questions = [row for row in questions if normalize_text(row.get("expected_answer", ""))]
     if limit > 0:
@@ -182,7 +186,7 @@ def evaluate_eval_set(
         expected_answer = row["expected_answer"]
         expected_sources, source_checkable = _expected_source_labels(row)
 
-        retrieved = retriever(question)[:top_k]
+        retrieved = retriever(question)[:runtime_top_k]
         retrieved_labels = {_doc_source_label(doc) for doc in retrieved}
         if source_checkable and expected_sources:
             retrieval_checked += 1
@@ -228,7 +232,7 @@ def evaluate_eval_set(
     summary: dict[str, Any] = {
         "samples": total,
         "mode": mode,
-        "top_k": top_k,
+        "top_k": runtime_top_k,
         "retrieval_hit_rate": retrieval_hits / retrieval_checked if retrieval_checked else 0.0,
         "reader_exact_match": reader_em / total if total else 0.0,
         "reader_f1": reader_f1 / total if total else 0.0,

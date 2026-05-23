@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
 from langchain_core.documents import Document
 
 from rag_chatbox.config import AppConfig
-from rag_chatbox.rag_pipeline import _finalize_answer, _prepare_chain_payload
+from rag_chatbox.rag_pipeline import _finalize_answer, _prepare_chain_payload, build_chatbot
 from rag_chatbox.reader_distilbert import ReaderAnswer
 
 
@@ -43,6 +44,7 @@ class TestPrepareChainPayload(unittest.TestCase):
         self.assertEqual(payload["reader_answer"], "I don't know.")
         self.assertEqual(payload["reader_span_score"], "0.0000")
         self.assertEqual(payload["allowed_sources"], [])
+        self.assertEqual(payload["debug_trace"]["reader"]["selection_reason"], "no_context_retrieved")
 
     def test_docs_with_reader_answer(self):
         docs = [Document(page_content="The answer is candidate.", metadata={"source": "demo.pdf", "page": 0})]
@@ -59,6 +61,10 @@ class TestPrepareChainPayload(unittest.TestCase):
         self.assertEqual(payload["reader_answer"], "candidate")
         self.assertEqual(payload["reader_span_score"], "1.0000")
         self.assertEqual(payload["allowed_sources"][0]["label"], "demo.pdf (Page 1)")
+        self.assertEqual(
+            payload["debug_trace"]["reader"]["selection_reason"],
+            "selected_best_non_empty_above_min_span_score",
+        )
 
     def test_finalize_answer_returns_grounded_sources(self):
         final = _finalize_answer(
@@ -78,6 +84,52 @@ class TestPrepareChainPayload(unittest.TestCase):
 
         self.assertIn("Nguồn:", final)
         self.assertEqual(final, "candidate\n\nNguồn:\n- Không có trích dẫn hợp lệ trong context.")
+
+    def test_chatbot_skips_llm_when_no_context(self):
+        config = AppConfig(reader_min_span_score=0.0)
+
+        class EmptyReader:
+            def answer_on_documents(self, question, docs):
+                return []
+
+        chatbot = build_chatbot(
+            config,
+            retriever=lambda _q: [],
+            reader=EmptyReader(),
+        )
+
+        answer = chatbot.ask("bài báo này giới thiệu gì")
+        self.assertEqual(answer, "Mình không biết.\n\nNguồn:\n- Không có trích dẫn hợp lệ trong context.")
+        trace = chatbot.get_last_debug_trace()
+        self.assertIsNotNone(trace)
+        self.assertEqual(trace["generation"]["llm_called"], False)
+        self.assertEqual(trace["generation"]["decision"], "skipped_llm_due_to_empty_context")
+
+    def test_build_chatbot_keeps_injected_retriever_when_reader_missing(self):
+        config = AppConfig(reader_min_span_score=0.0)
+
+        class EmptyReader:
+            def answer_on_documents(self, question, docs):
+                return []
+
+        calls = {"retriever": 0}
+
+        def injected_retriever(_q):
+            calls["retriever"] += 1
+            return []
+
+        with patch("rag_chatbox.rag_pipeline.load_documents", side_effect=AssertionError("must not load docs")):
+            with patch("rag_chatbox.rag_pipeline.split_documents", side_effect=AssertionError("must not split docs")):
+                with patch("rag_chatbox.rag_pipeline.DistilBertOnnxReader", return_value=EmptyReader()):
+                    chatbot = build_chatbot(
+                        config,
+                        retriever=injected_retriever,
+                        reader=None,
+                    )
+
+        answer = chatbot.ask("context đâu")
+        self.assertEqual(answer, "Mình không biết.\n\nNguồn:\n- Không có trích dẫn hợp lệ trong context.")
+        self.assertEqual(calls["retriever"], 1)
 
 
 if __name__ == "__main__":

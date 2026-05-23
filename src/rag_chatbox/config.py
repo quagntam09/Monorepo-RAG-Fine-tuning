@@ -21,6 +21,10 @@ class AppConfig:
     query_rewrite_model: str = "qwen2.5:0.5b"
     query_rewrite_temperature: float = 0.0
     query_rewrite_max_variants: int = 3
+    query_rewrite_cache_ttl_sec: float = 30.0
+    query_rewrite_cache_max_size: int = 512
+    retrieval_cache_ttl_sec: float = 15.0
+    retrieval_cache_max_size: int = 256
     reader_artifact_dir: str = "./artifacts/readers/run_best"
     reader_max_length: int = 384
     reader_max_answer_length: int = 30
@@ -30,6 +34,7 @@ class AppConfig:
     clean_pdf_text: bool = True
     token_aware_chunking: bool = False
     tokenizer_model: str = "distilbert-base-multilingual-cased"
+    debug_trace: bool = False
 
     @property
     def reader_model_dir(self) -> str:
@@ -92,6 +97,18 @@ def load_config() -> AppConfig:
     query_rewrite_max_variants = _env_int("RAG_QUERY_REWRITE_MAX_VARIANTS", 3)
     if query_rewrite_max_variants < 0:
         raise ValueError("RAG_QUERY_REWRITE_MAX_VARIANTS must be >= 0")
+    query_rewrite_cache_ttl_sec = _env_float("RAG_QUERY_REWRITE_CACHE_TTL_SEC", 30.0)
+    retrieval_cache_ttl_sec = _env_float("RAG_RETRIEVAL_CACHE_TTL_SEC", 15.0)
+    query_rewrite_cache_max_size = _env_int("RAG_QUERY_REWRITE_CACHE_MAX_SIZE", 512)
+    retrieval_cache_max_size = _env_int("RAG_RETRIEVAL_CACHE_MAX_SIZE", 256)
+    if query_rewrite_cache_ttl_sec < 0:
+        raise ValueError("RAG_QUERY_REWRITE_CACHE_TTL_SEC must be >= 0")
+    if retrieval_cache_ttl_sec < 0:
+        raise ValueError("RAG_RETRIEVAL_CACHE_TTL_SEC must be >= 0")
+    if query_rewrite_cache_max_size <= 0:
+        raise ValueError("RAG_QUERY_REWRITE_CACHE_MAX_SIZE must be > 0")
+    if retrieval_cache_max_size <= 0:
+        raise ValueError("RAG_RETRIEVAL_CACHE_MAX_SIZE must be > 0")
 
     return AppConfig(
         data_dir=os.getenv("RAG_DATA_DIR", "./paper"),
@@ -109,6 +126,10 @@ def load_config() -> AppConfig:
         query_rewrite_model=os.getenv("RAG_QUERY_REWRITE_MODEL", os.getenv("RAG_LLM_MODEL", "qwen2.5:0.5b")),
         query_rewrite_temperature=_env_float("RAG_QUERY_REWRITE_TEMPERATURE", 0.0),
         query_rewrite_max_variants=query_rewrite_max_variants,
+        query_rewrite_cache_ttl_sec=query_rewrite_cache_ttl_sec,
+        query_rewrite_cache_max_size=query_rewrite_cache_max_size,
+        retrieval_cache_ttl_sec=retrieval_cache_ttl_sec,
+        retrieval_cache_max_size=retrieval_cache_max_size,
         reader_artifact_dir=os.getenv(
             "RAG_READER_ARTIFACT_DIR",
             os.getenv("RAG_READER_MODEL_DIR", "./artifacts/readers/run_best"),
@@ -121,4 +142,5 @@ def load_config() -> AppConfig:
         clean_pdf_text=_env_bool("RAG_CLEAN_PDF_TEXT", True),
         token_aware_chunking=_env_bool("RAG_TOKEN_AWARE_CHUNKING", False),
         tokenizer_model=os.getenv("RAG_TOKENIZER_MODEL", "distilbert-base-multilingual-cased"),
+        debug_trace=_env_bool("RAG_DEBUG_TRACE", False),
     )

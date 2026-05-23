@@ -1,8 +1,15 @@
 __pycache__/
+*.py[cod]
 .pytest_cache/
 .venv/
 outputs/
 artifacts/
 .cache/
 .env
+.env.deploy
 paper/
+*.egg-info/
+*.pdf
+deploy/.env
+deploy/*.log
+tests/

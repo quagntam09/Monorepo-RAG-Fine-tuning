@@ -68,6 +68,42 @@ class TestEvaluateEvalSet(unittest.TestCase):
         self.assertEqual(result["summary"]["citation_hit_rate"], 1.0)
         self.assertEqual(result["rows"][0]["rag_citations"], ["demo.pdf (page 1)"])
 
+    def test_eval_runtime_top_k_overrides_config_top_k(self):
+        docs = [Document(page_content="Hà Nội là thủ đô của Việt Nam.", metadata={"source": "demo.pdf", "page": 0})]
+        captured: dict[str, int] = {}
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            eval_file = Path(tmpdir) / "questions.jsonl"
+            eval_file.write_text(
+                json.dumps(
+                    {
+                        "id": "q1",
+                        "question": "Thủ đô của Việt Nam là gì?",
+                        "expected_answer": "Hà Nội",
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            def fake_build_components(config, include_chatbot):
+                captured["top_k"] = config.top_k
+                captured["fetch_k"] = config.fetch_k
+                return (lambda _q: docs, FakeReader(), None)
+
+            with patch("rag_chatbox.evaluate_eval_set._build_components", side_effect=fake_build_components):
+                result = evaluate_eval_set(
+                    config=AppConfig(top_k=2, fetch_k=3, reader_min_span_score=0.0),
+                    eval_file=eval_file,
+                    mode="reader",
+                    top_k=7,
+                )
+
+        self.assertEqual(captured["top_k"], 7)
+        self.assertEqual(captured["fetch_k"], 7)
+        self.assertEqual(result["summary"]["top_k"], 7)
+
 
 if __name__ == "__main__":
     unittest.main()

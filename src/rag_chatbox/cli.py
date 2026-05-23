@@ -1,5 +1,6 @@
 import argparse
 from dataclasses import replace
+import json
 import logging
 from typing import Sequence
 
@@ -59,7 +60,31 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         default=None,
         help="Enable token-aware chunk splitting",
     )
+    parser.add_argument(
+        "--debug",
+        dest="debug_trace",
+        action="store_true",
+        default=None,
+        help="Print retrieval/reader/generation trace for each question",
+    )
+    parser.add_argument(
+        "--no-debug",
+        dest="debug_trace",
+        action="store_false",
+        default=None,
+        help="Disable retrieval/reader/generation trace output",
+    )
     return parser.parse_args(argv)
+
+
+def _print_debug_trace(chatbot, question: str) -> None:
+    trace = chatbot.get_last_debug_trace()
+    if not trace:
+        return
+
+    print("\n[DEBUG] Chat Trace")
+    print(json.dumps({"question_input": question}, ensure_ascii=False, indent=2))
+    print(json.dumps(trace, ensure_ascii=False, indent=2))
 
 
 def run_cli(argv: Sequence[str] | None = None) -> None:
@@ -92,3 +117,5 @@ def run_cli(argv: Sequence[str] | None = None) -> None:
         print("Chatbot đang suy nghĩ...")
         answer = chatbot.ask(user_input)
         print(f"\nChatbot:\n{answer}")
+        if config.debug_trace:
+            _print_debug_trace(chatbot, question=user_input)

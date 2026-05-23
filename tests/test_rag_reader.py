@@ -72,6 +72,19 @@ class TestReaderAnswers(unittest.TestCase):
         self.assertEqual(ranked[0].answer, "answer-b")
         self.assertEqual(ranked[0].source, "b.pdf")
 
+    def test_answer_on_documents_uses_batch_path_when_available(self):
+        reader = DistilBertOnnxReader.__new__(DistilBertOnnxReader)
+        reader.tokenizer = object()
+        reader.session = object()
+        reader._run_pairs = lambda questions, contexts: [
+            ("batch-answer", 2.0, 1.0, 1.0) for _ in contexts
+        ]
+
+        docs = [Document(page_content="context", metadata={"source": "a.pdf", "page": 0})]
+        ranked = reader.answer_on_documents(question="q", docs=docs)
+        self.assertEqual(ranked[0].answer, "batch-answer")
+        self.assertEqual(ranked[0].span_score, 2.0)
+
     def test_select_best_reader_answer_skips_empty_top_span(self):
         ranked_answers = [
             ReaderAnswer(

@@ -31,6 +31,10 @@ dependencies = [
   "faiss-cpu>=1.13.2",
   "python-dotenv>=1.2.2",
   "pypdf>=6.11.0",
+  "fastapi>=0.115.0",
+  "httpx>=0.28.0",
+  "uvicorn>=0.30.0",
+  "pydantic>=2.7.0",
 ]
 
 [project.scripts]
@@ -39,6 +43,9 @@ rag-ft-eval = "training.cli:eval_main"
 rag-ft-export = "training.cli:export_main"
 rag-chatbox = "rag_chatbox.cli:run_cli"
 rag-eval = "rag_chatbox.evaluate_eval_set:main"
+rag-indexer = "rag_chatbox.services.indexer_job:main"
+rag-reader-service = "rag_chatbox.services.reader_service:main"
+rag-synthesis-service = "rag_chatbox.services.synthesis_service:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

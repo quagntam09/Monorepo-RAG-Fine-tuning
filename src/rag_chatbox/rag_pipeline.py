@@ -8,7 +8,6 @@ from typing import Any, Callable
 
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnableLambda
 from langchain_ollama import OllamaLLM
 
 from .config import AppConfig
@@ -43,14 +42,17 @@ Answer:"""
 
 @dataclass
 class RagChatbot:
-    ask_fn: Callable[[str, str], str]
+    ask_fn: Callable[[str, str], tuple[str, dict[str, Any] | None]]
     chat_history: str = ""
+    last_debug: dict[str, Any] | None = None
 
     def answer(self, question: str, chat_history: str = "") -> str:
-        return self.ask_fn(question, chat_history)
+        answer, _ = self.ask_fn(question, chat_history)
+        return answer
 
     def ask(self, question: str) -> str:
-        answer = self.answer(question, self.chat_history)
+        answer, debug_trace = self.ask_fn(question, self.chat_history)
+        self.last_debug = debug_trace
         logger.info(
             "rag_final_answer=%s",
             json.dumps(
@@ -63,6 +65,9 @@ class RagChatbot:
         )
         self.chat_history += f"\nUser: {question}\nAssistant: {answer}\n"
         return answer
+
+    def get_last_debug_trace(self) -> dict[str, Any] | None:
+        return self.last_debug
 
 
 def _page_label(doc: Any) -> str:
@@ -77,6 +82,13 @@ def _page_label(doc: Any) -> str:
 
 def _normalize_source_label(text: str) -> str:
     return " ".join((text or "").strip().lower().split())
+
+
+def _preview(text: str, limit: int = 160) -> str:
+    flattened = " ".join((text or "").split())
+    if len(flattened) <= limit:
+        return flattened
+    return flattened[: max(0, limit - 3)].rstrip() + "..."
 
 
 def _format_allowed_sources(docs: list[Any]) -> list[dict[str, Any]]:
@@ -147,6 +159,7 @@ def _prepare_chain_payload(
     config: AppConfig,
 ) -> dict[str, Any]:
     docs = retriever(question)
+    retrieval_trace = getattr(retriever, "last_trace", None)
     context_block = format_docs_with_metadata(docs)
     retrieval_sources = [
         {
@@ -157,6 +170,7 @@ def _prepare_chain_payload(
         for doc in docs
     ]
     allowed_sources = _format_allowed_sources(docs)
+    ranked_answers = reader.answer_on_documents(question=question, docs=docs) if docs else []
 
     if not docs:
         logger.info(
@@ -178,12 +192,28 @@ def _prepare_chain_payload(
             "chat_history": chat_history,
             "question": question,
             "allowed_sources": allowed_sources,
+            "debug_trace": {
+                "question_received": question,
+                "chat_history_chars": len(chat_history or ""),
+                "retrieval": retrieval_trace
+                or {
+                    "question": question,
+                    "selected": [],
+                    "decision": "no_chunks_after_threshold_filter",
+                },
+                "reader": {
+                    "min_span_score": float(config.reader_min_span_score),
+                    "candidate_count": 0,
+                    "selected_answer": "I don't know.",
+                    "selected_span_score": 0.0,
+                    "selection_reason": "no_context_retrieved",
+                },
+            },
         }
-
-    ranked_answers = reader.answer_on_documents(question=question, docs=docs)
 
     reader_answer = "I don't know."
     reader_span_score = 0.0
+    reader_decision = "no_candidate_generated"
     if ranked_answers:
         top_answer = ranked_answers[0]
         reader_span_score = top_answer.span_score
@@ -191,6 +221,9 @@ def _prepare_chain_payload(
         if selected_answer is not None:
             reader_answer = selected_answer.answer
             reader_span_score = selected_answer.span_score
+            reader_decision = "selected_best_non_empty_above_min_span_score"
+        else:
+            reader_decision = "all_candidates_empty_or_below_min_span_score"
 
     logger.info(
         "rag_retrieval=%s",
@@ -205,6 +238,19 @@ def _prepare_chain_payload(
         ),
     )
 
+    reader_candidates = [
+        {
+            "rank": idx + 1,
+            "source": candidate.source,
+            "page": candidate.page,
+            "span_score": float(candidate.span_score),
+            "start_score": float(candidate.start_score),
+            "end_score": float(candidate.end_score),
+            "answer_preview": _preview(candidate.answer, limit=120),
+        }
+        for idx, candidate in enumerate(ranked_answers[: min(5, len(ranked_answers))])
+    ]
+
     return {
         "context": context_block,
         "reader_answer": reader_answer,
@@ -212,6 +258,24 @@ def _prepare_chain_payload(
         "chat_history": chat_history,
         "question": question,
         "allowed_sources": allowed_sources,
+        "debug_trace": {
+            "question_received": question,
+            "chat_history_chars": len(chat_history or ""),
+            "retrieval": retrieval_trace
+            or {
+                "question": question,
+                "selected": retrieval_sources,
+                "decision": "selected_top_k_by_rerank",
+            },
+            "reader": {
+                "min_span_score": float(config.reader_min_span_score),
+                "candidate_count": len(ranked_answers),
+                "top_candidates": reader_candidates,
+                "selected_answer": _preview(reader_answer, limit=160),
+                "selected_span_score": float(reader_span_score),
+                "selection_reason": reader_decision,
+            },
+        },
     }
 
 
@@ -221,7 +285,7 @@ def build_chatbot(
     retriever: Callable[[str], list[Any]] | None = None,
     reader: DistilBertOnnxReader | None = None,
 ) -> RagChatbot:
-    if retriever is None or reader is None:
+    if retriever is None and reader is None:
         print("Đang tải dữ liệu và khởi tạo Retriever...")
         documents = load_documents(config)
         chunks = split_documents(documents, config)
@@ -233,10 +297,23 @@ def build_chatbot(
             n_best_size=config.reader_n_best_size,
             require_metadata=config.reader_require_metadata,
         )
+    elif retriever is None:
+        print("Đang tải dữ liệu và khởi tạo Retriever...")
+        documents = load_documents(config)
+        chunks = split_documents(documents, config)
+        retriever = build_retriever(documents, chunks, config)
+    elif reader is None:
+        reader = DistilBertOnnxReader(
+            artifact_dir=config.reader_artifact_dir,
+            max_length=config.reader_max_length,
+            max_answer_length=config.reader_max_answer_length,
+            n_best_size=config.reader_n_best_size,
+            require_metadata=config.reader_require_metadata,
+        )
 
     prompt = ChatPromptTemplate.from_template(PROMPT_TEMPLATE)
     llm = OllamaLLM(model=config.llm_model, temperature=config.temperature)
-    runtime_state: dict[str, list[dict[str, Any]]] = {"allowed_sources": []}
+    runtime_state: dict[str, Any] = {"allowed_sources": [], "debug_trace": None}
 
     def _prepare_payload(question: str, chat_history: str) -> dict[str, Any]:
         payload = _prepare_chain_payload(
@@ -247,6 +324,7 @@ def build_chatbot(
             config=config,
         )
         runtime_state["allowed_sources"] = list(payload.get("allowed_sources", []))
+        runtime_state["debug_trace"] = payload.get("debug_trace")
         return {
             "context": payload["context"],
             "reader_answer": payload["reader_answer"],
@@ -255,20 +333,29 @@ def build_chatbot(
             "question": payload["question"],
         }
 
-    chain = (
-        RunnableLambda(
-            lambda x: _prepare_payload(
-                question=x["question"],
-                chat_history=x["chat_history"],
-            )
-        )
-        | prompt
-        | llm
-        | StrOutputParser()
-    )
+    def ask_fn(question: str, chat_history: str) -> tuple[str, dict[str, Any] | None]:
+        payload = _prepare_payload(question=question, chat_history=chat_history)
+        no_context = not runtime_state.get("allowed_sources")
+        if no_context:
+            final_answer = "Mình không biết.\n\nNguồn:\n- Không có trích dẫn hợp lệ trong context."
+            raw_answer = final_answer
+        else:
+            raw_answer = (prompt | llm | StrOutputParser()).invoke(payload)
+            final_answer = _finalize_answer(raw_answer, runtime_state["allowed_sources"])
 
-    def ask_fn(question: str, chat_history: str) -> str:
-        raw_answer = chain.invoke({"question": question, "chat_history": chat_history})
-        return _finalize_answer(raw_answer, runtime_state["allowed_sources"])
+        debug_trace = runtime_state.get("debug_trace")
+        if debug_trace is not None:
+            body, source_lines = _split_answer_and_sources(final_answer)
+            debug_trace = dict(debug_trace)
+            debug_trace["generation"] = {
+                "llm_model": config.llm_model,
+                "temperature": float(config.temperature),
+                "llm_called": not no_context,
+                "decision": "skipped_llm_due_to_empty_context" if no_context else "generated_with_llm_and_source_filter",
+                "raw_answer_preview": _preview(str(raw_answer), limit=200),
+                "final_answer_preview": _preview(body, limit=200),
+                "final_sources": source_lines,
+            }
+        return final_answer, debug_trace
 
     return RagChatbot(ask_fn=ask_fn)
