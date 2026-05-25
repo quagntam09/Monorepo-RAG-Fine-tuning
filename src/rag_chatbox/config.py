@@ -10,6 +10,7 @@ class AppConfig:
     file_glob: str = "**/*.pdf"
     faiss_index_dir: str = "./.cache/faiss"
     embedding_model: str = "bge-m3"
+    ollama_base_url: str = "http://localhost:11434"
     llm_model: str = "qwen2.5:0.5b"
     temperature: float = 0.2
     chunk_size: int = 1200
@@ -118,6 +119,7 @@ def load_config() -> AppConfig:
         file_glob=os.getenv("RAG_FILE_GLOB", "**/*.pdf"),
         faiss_index_dir=os.getenv("RAG_FAISS_INDEX_DIR", "./.cache/faiss"),
         embedding_model=os.getenv("RAG_EMBEDDING_MODEL", "bge-m3"),
+        ollama_base_url=os.getenv("RAG_OLLAMA_BASE_URL", os.getenv("OLLAMA_HOST", "http://localhost:11434")),
         llm_model=os.getenv("RAG_LLM_MODEL", "qwen2.5:0.5b"),
         temperature=_env_float("RAG_TEMPERATURE", 0.2),
         chunk_size=chunk_size,

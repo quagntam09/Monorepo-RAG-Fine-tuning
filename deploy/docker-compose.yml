@@ -11,6 +11,7 @@ services:
       - ../outputs:/app/outputs
     profiles:
       - jobs
+    network_mode: "host"
 
   reader:
     build:
@@ -18,10 +19,9 @@ services:
       dockerfile: deploy/reader/Dockerfile
     env_file:
       - ../.env.deploy.example
-    ports:
-      - "8081:8081"
     volumes:
       - ../artifacts:/app/artifacts:ro
+    network_mode: "host"
 
   synthesis:
     build:
@@ -30,11 +30,8 @@ services:
     env_file:
       - ../.env.deploy
     environment:
-      RAG_READER_SERVICE_URL: http://reader:8081
-    ports:
-      - "8080:8080"
+      RAG_READER_SERVICE_URL: http://localhost:8081
     volumes:
       - ../paper:/app/paper:ro
       - ../.cache:/app/.cache
-    depends_on:
-      - reader
+    network_mode: "host"

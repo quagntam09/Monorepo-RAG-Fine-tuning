@@ -5,45 +5,49 @@
     "mode": "rag",
     "top_k": 5,
     "truncated_by_runtime": false,
-    "retrieval_hit_rate": 0.4,
+    "retrieval_hit_rate": 0.45,
     "reader_exact_match": 0.0,
-    "reader_f1": 0.10053310422345416,
+    "reader_f1": 0.11183835488007979,
     "rag_exact_match": 0.0,
-    "rag_f1": 0.09848290703323918,
-    "citation_hit_rate": 0.0,
-    "rag_timeout_count": 2
+    "rag_f1": 0.13711499075247408,
+    "citation_hit_rate": 0.3,
+    "rag_timeout_count": 0
   },
   "rows": [
     {
       "id": "q001",
       "question": "RAG là gì và mục tiêu chính của kiến trúc này là gì?",
       "expected_answer": "RAG là kiến trúc Retrieve and Prompt: hệ thống truy xuất tài liệu bên ngoài rồi đưa vào prompt để LLM sinh câu trả lời grounded, nhằm giảm hallucination và vượt giới hạn knowledge cutoff.",
-      "reader_prediction": "chuyển đổi dữ liệu thô từ nhiều định dạng khác nhau thành một\nđịnh dạng thống nhất để hệ thống có thể tìm kiếm được",
-      "rag_prediction": "RAG (Retrieval-Augmented Generation) là một giải pháp kiến trúc nhằm khắc phục hai giới hạn cố hữu của LLM: hallucination và sự thiếu hụt tri thứ tự cập nhật và riêng tư. RAG sử dụng bộ nhớ ngoài để tra cứu thời gian thực từ các bộ nhớ bên ngoài, giúp mô hình không phụ thuộc hoàn toàn vào bộ nhớ tham số được cố định sau huấn luyện, đồng thời cũng giúp LLM có khả năng tìm kiếm thông tin hiệu quả hơn.\n\nMục tiêu chính của kiến trúc RAG là tối ưu hóa các bước xử lý ngữ cảnh trong hệ thống, bao gồm việc truy cập và lưu trữ dữ liệu, và tối ưu hóa các bước xử lý ngôn ngữ. RAG sử dụng các thành phần như Vector Store (Vector), Embedding (Model), Query (Query) để tạo ra một hệ thống retrieval augmented generation (RAG) cơ bản.\n\nI. Dẫn nhập\nII.1. Sự chuyển dịch sang In-Context RAG\nIII.1. Phân tích dữ liệu PDF\nIV.1. Mô hình hóa RAG hiện nay\nV.1. Các khái niệm RAG nâng cao\nVI.1. Cấu trúc RAG hiện đại\nVII.1. Phân tích dữ liệu PDF\nVIII.1. Các khái niệm RAG nâng cao\nIX.1. Cấu trúc RAG hiện đại\nX.1. Phân tích dữ liệu PDF\nXI.1. Các khái niệm RAG nâng cao\nXII.1. Cấu trúc RAG hiện đại\nXIII.1. Phân tích dữ liệu PDF\nXIV.1. Các khái niệm RAG nâng cao\nXV.1. Cấu trúc RAG hiện đại\nXVI.1. Phân tích dữ liệu PDF\nXII.2. Kiến trúc RAG hiện đại\nXIII.2. Phân tích dữ liệu PDF\nXIV.2. Các khái niệm RAG hiện đại\nXV.2. Cấu trúc RAG hiện đại\nXVI.2. Phân tích dữ liệu PDF\nXII.3. Kiến trúc RAG hiện đại\nXIII.3. Phân tích dữ liệu PDF\nXIV.3. Các khái niệm RAG hiện đại\nXV.3. Cấu trúc RAG hiện đại\nXVI.3. Phân tích dữ liệu PDF\nXII.4. Kiến trúc RAG hiện đại\nXIII.4. Phân tích dữ liệu PDF\nXIV.4. Các khái niệm RAG hiện đại\nXV.4. Cấu trúc RAG hiện đại\nXVI.4. Phân tích dữ liệu PDF\nXII.5. Kiến trúc RAG hiện đại\nXIII.5. Phân tích dữ liệu PDF\nXIV.5. Các khái niệm RAG hiện đại\nXV.5. Cấu trúc RAG hiện đại\nXVI.5. Phân tích dữ liệu PDF\nXII.6. Kiến trúc RAG hiện đại\nXIII.6. Phân tích dữ liệu PDF\nXIV.6. Các khái niệm RAG hiện đại\nXV.6. Cấu trúc RAG hiện đại\nXVI.6. Phân tích dữ liệu PDF\nXII.7. Kiến trúc RAG hiện đại\nXIII.7. Phân tích dữ liệu PDF\nXIV.7. Các khái niệm RAG hiện đại\nXV.7. Cấu trúc RAG hiện đại\nXVI.7. Phân tích dữ liệu PDF\nXII.8. Kiến trúc RAG hiện đại\nXIII.8. Phân tích dữ liệu PDF\nXIV.8. Các khái niệm RAG hiện đại\nXV.8. Cấu trúc RAG hiện đại\nXVI.8. Phân tích dữ liệu PDF\nXII.9. Kiến trúc RAG hiện đại\nXIII.9. Phân tích dữ liệu PDF\nXIV.9. Các khái niệm RAG hiện đại\nXV.9. Cấu trúc RAG hiện đại\nXVI.9. Phân tích dữ liệu PDF\n\nNguồn:\n- Không có trích dẫn hợp lệ trong context.",
+      "reader_prediction": "hệ thống retrieval augmented\ngeneration",
+      "rag_prediction": "RAG (Retrieval-Augmented Generation) là một giải pháp nâng cao cho việc xử lý dữ liệu phức tạp. Mục tiêu chính của kiến trúc RAG là khắc phục nhược điểm của các mô hình Pre-trained Seq2Seq truyền thống, đặc biệt là vấn đề về khả năng truy cập và xử lý dữ liệu lớn.\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 39)\n- paper/[Reading]-RAG-System.pdf (Page 5)\n- paper/[Reading]-RAG-System.pdf (Page 4)",
       "retrieved_sources": [
         "paper/[reading]-rag-system.pdf (page 36)",
         "paper/[reading]-rag-system.pdf (page 39)",
         "paper/[reading]-rag-system.pdf (page 4)",
-        "paper/[reading]-rag-system.pdf (page 5)"
+        "paper/[reading]-rag-system.pdf (page 5)",
+        "paper/[reading]-rag-system.pdf (page 56)"
       ],
       "expected_sources": [
         "[reading]-rag-system.pdf (page 4)",
         "[reading]-rag-system.pdf (page 5)"
       ],
       "rag_citations": [
-        "không có trích dẫn hợp lệ trong context."
+        "paper/[reading]-rag-system.pdf (page 39)",
+        "paper/[reading]-rag-system.pdf (page 4)",
+        "paper/[reading]-rag-system.pdf (page 5)"
       ]
     },
     {
       "id": "q002",
       "question": "Một hệ thống RAG thường gồm những thành phần chính nào?",
       "expected_answer": "Một hệ thống RAG thường gồm document loader, splitter/chunking, embedding model, vector store, retriever và LLM/generator.",
-      "reader_prediction": "Indexing, Retrieval và Generation",
-      "rag_prediction": "I don't know.",
+      "reader_prediction": "Indexing, Retrieval và Generation.\nVector Store\nDocuments\nChunks",
+      "rag_prediction": "Vector Store, Documents,Chunks, Embedding, Model, Query, Vector.\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 56)\n- paper/[Reading]-RAG-System.pdf (Page 17)\n- paper/[Reading]-RAG-System.pdf (Page 39)",
       "retrieved_sources": [
         "paper/[reading]-rag-system.pdf (page 17)",
         "paper/[reading]-rag-system.pdf (page 39)",
         "paper/[reading]-rag-system.pdf (page 5)",
+        "paper/[reading]-rag-system.pdf (page 56)",
         "paper/[reading]-rag-system.pdf (page 80)"
       ],
       "expected_sources": [
@@ -53,25 +57,32 @@
         "[reading]-rag-system.pdf (page 20)",
         "[reading]-rag-system.pdf (page 21)"
       ],
-      "rag_citations": []
+      "rag_citations": [
+        "paper/[reading]-rag-system.pdf (page 17)",
+        "paper/[reading]-rag-system.pdf (page 39)",
+        "paper/[reading]-rag-system.pdf (page 56)"
+      ]
     },
     {
       "id": "q003",
       "question": "Trong RAG, retriever có vai trò gì?",
       "expected_answer": "Retriever truy vấn vector store để lấy top-k chunk liên quan nhất với câu hỏi.",
       "reader_prediction": "khắc phục hai giới hạn cố\nhữu của LLM:hallucination và sự thiếu hụt tri thứccập nhật và riêng tư",
-      "rag_prediction": "Trong RAG (Ragaman), retriever có vai trò như một hệ thống tìm kiếm dựa trên các giá trị từ dữ liệu gốc. Dữ liệu gốc được sử dụng để tạo các câu hỏi và trả lời cho các câu hỏi, trong đó retriever sẽ tìm kiếm các giá trị phù hợp để trả lời câu hỏi.\n\nNguồn:\n- Không có trích dẫn hợp lệ trong context.",
+      "rag_prediction": "In-Context RAG (RAG) uses Retrieval-Augmented Generation (RAG) to improve the efficiency and accuracy of LLMs. It indexes documents, generates answers based on the query, and retrieves relevant information from external data sources.\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 66)\n- paper/[Reading]-RAG-System.pdf (Page 15)\n- paper/[Reading]-RAG-System.pdf (Page 39)",
       "retrieved_sources": [
+        "paper/[reading]-rag-system.pdf (page 15)",
         "paper/[reading]-rag-system.pdf (page 39)",
+        "paper/[reading]-rag-system.pdf (page 4)",
         "paper/[reading]-rag-system.pdf (page 5)",
-        "paper/[reading]-rag-system.pdf (page 66)",
-        "paper/[reading]-rag-system.pdf (page 70)"
+        "paper/[reading]-rag-system.pdf (page 66)"
       ],
       "expected_sources": [
         "[reading]-rag-system.pdf (page 19)"
       ],
       "rag_citations": [
-        "không có trích dẫn hợp lệ trong context."
+        "paper/[reading]-rag-system.pdf (page 15)",
+        "paper/[reading]-rag-system.pdf (page 39)",
+        "paper/[reading]-rag-system.pdf (page 66)"
       ]
     },
     {
@@ -79,12 +90,12 @@
       "question": "Trong RAG, generator có vai trò gì?",
       "expected_answer": "Generator hoặc LLM tổng hợp ngữ cảnh đã truy xuất thành câu trả lời cuối cùng.",
       "reader_prediction": "vai trò cụ thể của tham sốchunk_overlap=120 trong đoạn\ncode trên là gì?\n(a)",
-      "rag_prediction": "Trong RAG (Retrieval-Augmented Generation), Generator không chỉ giúp LLM tự động sinh văn bản từ các tài liệu, mà còn giúp LLM sử dụng các tài liệu ẩn để tìm kiếm và trả lời câu hỏi.\n\nNguồn:\n- Không có trích dẫn hợp lệ trong context.",
+      "rag_prediction": "Trong RAG, generator là một mô hình xác suất lai (hybrid probabilistic model) kết hợp giữa hai dạng bộ nhớ để khắc phục nhược điểm của các mô hình Pre-trained Seq2Seq truyền thống.\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 4)\n- paper/[Reading]-RAG-System.pdf (Page 66)\n- paper/[Reading]-RAG-System.pdf (Page 33)",
       "retrieved_sources": [
         "paper/[reading]-rag-system.pdf (page 33)",
         "paper/[reading]-rag-system.pdf (page 39)",
         "paper/[reading]-rag-system.pdf (page 4)",
-        "paper/[reading]-rag-system.pdf (page 56)",
+        "paper/[reading]-rag-system.pdf (page 62)",
         "paper/[reading]-rag-system.pdf (page 66)"
       ],
       "expected_sources": [
@@ -94,7 +105,9 @@
         "[reading]-rag-system.pdf (page 5)"
       ],
       "rag_citations": [
-        "không có trích dẫn hợp lệ trong context."
+        "paper/[reading]-rag-system.pdf (page 33)",
+        "paper/[reading]-rag-system.pdf (page 4)",
+        "paper/[reading]-rag-system.pdf (page 66)"
       ]
     },
     {
@@ -102,11 +115,11 @@
       "question": "Tại sao cần chia nhỏ tài liệu thành các chunk trước khi indexing?",
       "expected_answer": "Chia nhỏ tài liệu để phù hợp context window, giảm nhiễu và tăng độ chính xác truy xuất.",
       "reader_prediction": "giúp tăng độ chính xác khi truy xuất",
-      "rag_prediction": "1. Giới hạn Context Window: Các mô hình LLM và Embedding đều có giới hạn về số lượng token đầu vào.\n2. Độ chính xác của tìm kiếm: Vector của một đoạn văn ngắn tập trung vào một ý tưởng cụ thể sẽ đại diện cho ngữ nghĩa tốt hơn so với vector trung bình cộng của cả một trang giấy chứa nhiều chủ đề hỗn tạp.\n\nSource: paper/[Reading]-RAG-System.pdf (Page 6)\n\nNguồn:\n- Không có trích dẫn hợp lệ trong context.",
+      "rag_prediction": "Trong bối cảnh xây dựng RAG, chiến lược đặttemperature ở mức thấp lại là tiêu chuẩn được khuyến nghị thay vì đặt ở mức cao.\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 8)\n- paper/[Reading]-RAG-System.pdf (Page 33)\n- paper/[Reading]-RAG-System.pdf (Page 18)",
       "retrieved_sources": [
         "paper/[reading]-rag-system.pdf (page 18)",
-        "paper/[reading]-rag-system.pdf (page 25)",
-        "paper/[reading]-rag-system.pdf (page 40)",
+        "paper/[reading]-rag-system.pdf (page 33)",
+        "paper/[reading]-rag-system.pdf (page 41)",
         "paper/[reading]-rag-system.pdf (page 6)",
         "paper/[reading]-rag-system.pdf (page 8)"
       ],
@@ -117,18 +130,21 @@
         "[reading]-rag-system.pdf (page 3)"
       ],
       "rag_citations": [
-        "không có trích dẫn hợp lệ trong context."
+        "paper/[reading]-rag-system.pdf (page 18)",
+        "paper/[reading]-rag-system.pdf (page 33)",
+        "paper/[reading]-rag-system.pdf (page 8)"
       ]
     },
     {
       "id": "q006",
       "question": "Chunk overlap mang lại lợi ích gì trong quá trình truy hồi?",
       "expected_answer": "Overlap giữ lại phần ngữ cảnh ở ranh giới chunk để tránh mất ý nghĩa khi câu bị cắt.",
-      "reader_prediction": "Để đảm bảo ngữ nghĩa không bị mất tại điểm cắt giữa hai chunk\nliền kề",
-      "rag_prediction": "I don't know.",
+      "reader_prediction": "chunk_size,\n6 chunk_overlap=chunk_overlap,\n7 length_function=len,\n8",
+      "rag_prediction": "Trí tuệ nhân tạo đang tạo ra những bước ngoặt lớn trong mọi lĩnh vực của đời sống hiện đại. Các mô hình ngôn ngữ lớn giúp chúng ta xử lý và phân tích khối lượng dữ liệu khổng lồ chỉ trong tích tắc. Tuy nhiên, việc ứng dụng công nghệ này đòi hỏi sự hiểu biết sâu sắc để đảm bảo tính chính xác và an toàn. Source: paper/[Reading]-RAG-System.pdf (Page 8)\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 8)\n- paper/[Reading]-RAG-System.pdf (Page 33)\n- paper/[Reading]-RAG-System.pdf (Page 31)",
       "retrieved_sources": [
-        "paper/[reading]-rag-system.pdf (page 40)",
-        "paper/[reading]-rag-system.pdf (page 41)",
+        "paper/[reading]-rag-system.pdf (page 109)",
+        "paper/[reading]-rag-system.pdf (page 31)",
+        "paper/[reading]-rag-system.pdf (page 33)",
         "paper/[reading]-rag-system.pdf (page 7)",
         "paper/[reading]-rag-system.pdf (page 8)"
       ],
@@ -137,60 +153,68 @@
         "[reading]-rag-system.pdf (page 24)",
         "[reading]-rag-system.pdf (page 25)"
       ],
-      "rag_citations": []
+      "rag_citations": [
+        "paper/[reading]-rag-system.pdf (page 31)",
+        "paper/[reading]-rag-system.pdf (page 33)",
+        "paper/[reading]-rag-system.pdf (page 8)"
+      ]
     },
     {
       "id": "q007",
       "question": "Vector embedding được dùng như thế nào trong bước retrieval?",
       "expected_answer": "Embedding biến văn bản thành vector; các văn bản gần nghĩa sẽ gần nhau trong không gian vector nên truy xuất ngữ nghĩa được.",
-      "reader_prediction": "là phương pháp phổ biến để lưu trữ và tìm kiếm trên dữ liệu phi cấu trúc",
-      "rag_prediction": "Vector embedding được sử dụng để tạo vector query (q) và sử dụng các phương pháp tìm kiếm tương đồng giữa vector q và toàn bộ vector trong database.\n\nNguồn:\n- Không có trích dẫn hợp lệ trong context.",
+      "reader_prediction": "giúp embedding của truy vấn gần hơn với không gian\nngữ nghĩa của tài liệu",
+      "rag_prediction": "Vector embedding được sử dụng để tạo vector query (q) và vector database.\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 40)\n- paper/[Reading]-RAG-System.pdf (Page 46)\n- paper/[Reading]-RAG-System.pdf (Page 94)",
       "retrieved_sources": [
-        "paper/[reading]-rag-system.pdf (page 110)",
-        "paper/[reading]-rag-system.pdf (page 18)",
+        "paper/[reading]-rag-system.pdf (page 11)",
         "paper/[reading]-rag-system.pdf (page 40)",
         "paper/[reading]-rag-system.pdf (page 46)",
+        "paper/[reading]-rag-system.pdf (page 9)",
         "paper/[reading]-rag-system.pdf (page 94)"
       ],
       "expected_sources": [
         "[reading]-rag-system.pdf (page 18)"
       ],
       "rag_citations": [
-        "không có trích dẫn hợp lệ trong context."
+        "paper/[reading]-rag-system.pdf (page 40)",
+        "paper/[reading]-rag-system.pdf (page 46)",
+        "paper/[reading]-rag-system.pdf (page 94)"
       ]
     },
     {
       "id": "q008",
       "question": "FAISS hỗ trợ bước nào trong pipeline RAG và vì sao phù hợp?",
       "expected_answer": "FAISS là vector store/index để lưu vector và thực hiện similarity search nhanh trên tập chunk.",
-      "reader_prediction": "bước tiếp theo",
-      "rag_prediction": "FAISS (Fast & Accurate Inference for Semantic Search) không được đề cập trực tiếp trong file PDF mà chỉ có đoạn văn bản trên đầu. Tuy nhiên, dựa trên nội dung, FAISS có thể liên quan đến việc xử lý và phân tích dữ liệu, đặc biệt là các thuật toán xử lý ngôn ngữ lớn như GPT-4. Vì vậy, FAISS có thể hỗ trợ bước nào trong pipeline RAG không rõ ràng. Tuy nhiên, dựa trên thông tin mà bạn cung cấp, tôi cho rằng FAISS có thể giúp tăng hiệu suất và độ chính xác của pipeline RAG.\n\nFAISS được sử dụng để xử lý dữ liệu lớn và phân tích ngôn ngữ, điều này có thể phù hợp với việc sử dụng RAG để tạo các mô hình dự đoán. Tuy nhiên, tôi không chắc chắn về cách FAISS sẽ hỗ trợ từng bước trong pipeline RAG cụ thể hơn.\n\nNguồn:\n- Không có trích dẫn hợp lệ trong context.",
+      "reader_prediction": "hệ thống sẽ thực hiện inference (tạm dịch: suy luận) dựa trên toàn bộ danh sách\ncâu hỏi từ tập test",
+      "rag_prediction": "FAISS (Fast & Accurate Inference System) không chỉ hỗ trợ các bước trong pipeline RAG mà còn giúp tối ưu hóa hiệu suất của nó.\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 56)\n- paper/[Reading]-RAG-System.pdf (Page 77)\n- paper/[Reading]-RAG-System.pdf (Page 62)",
       "retrieved_sources": [
         "paper/[reading]-rag-system.pdf (page 21)",
+        "paper/[reading]-rag-system.pdf (page 39)",
         "paper/[reading]-rag-system.pdf (page 56)",
         "paper/[reading]-rag-system.pdf (page 62)",
-        "paper/[reading]-rag-system.pdf (page 67)",
         "paper/[reading]-rag-system.pdf (page 77)"
       ],
       "expected_sources": [
         "[reading]-rag-system.pdf (page 19)"
       ],
       "rag_citations": [
-        "không có trích dẫn hợp lệ trong context."
+        "paper/[reading]-rag-system.pdf (page 56)",
+        "paper/[reading]-rag-system.pdf (page 62)",
+        "paper/[reading]-rag-system.pdf (page 77)"
       ]
     },
     {
       "id": "q009",
       "question": "RAG giúp giảm hallucination của LLM bằng cơ chế nào?",
       "expected_answer": "RAG giảm hallucination bằng cách neo câu trả lời vào context truy xuất từ tài liệu bên ngoài thay vì chỉ dựa vào trọng số mô hình.",
-      "reader_prediction": "Chiến lược Indexing",
-      "rag_prediction": "RAG giúp giảm hallucination của LLM bằng chiến lược Indexing nâng cao.\n\nNguồn:\n- Không có trích dẫn hợp lệ trong context.",
+      "reader_prediction": "Bộ não tổng hợp thông tin, suy luận và sinh câu trả lời dựa trên ngữ cảnh\ntruy vấn",
+      "rag_prediction": "RAG giúp giảm hallucination của LLM bằng cách sử dụng Embedding Model và Vector Store, nhưng quy trình dừng ở Retrieval.\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 1)\n- paper/[Reading]-RAG-System.pdf (Page 39)\n- paper/[Reading]-RAG-System.pdf (Page 97)",
       "retrieved_sources": [
         "paper/[reading]-rag-system.pdf (page 1)",
+        "paper/[reading]-rag-system.pdf (page 16)",
+        "paper/[reading]-rag-system.pdf (page 38)",
         "paper/[reading]-rag-system.pdf (page 39)",
-        "paper/[reading]-rag-system.pdf (page 5)",
-        "paper/[reading]-rag-system.pdf (page 73)",
-        "paper/[reading]-rag-system.pdf (page 8)"
+        "paper/[reading]-rag-system.pdf (page 97)"
       ],
       "expected_sources": [
         "[reading]-rag-system.pdf (page 3)",
@@ -199,19 +223,22 @@
         "[reading]-rag-system.pdf (page 56)"
       ],
       "rag_citations": [
-        "không có trích dẫn hợp lệ trong context."
+        "paper/[reading]-rag-system.pdf (page 1)",
+        "paper/[reading]-rag-system.pdf (page 39)",
+        "paper/[reading]-rag-system.pdf (page 97)"
       ]
     },
     {
       "id": "q010",
       "question": "Sự khác biệt chính giữa closed-book QA và RAG là gì?",
       "expected_answer": "Closed-book QA chỉ dùng tri thức sẵn trong LLM; RAG truy xuất dữ liệu ngoài rồi mới trả lời.",
-      "reader_prediction": "sự thiếu\nhụt kiến thức về dữ liệu riêng tư của doanh nghiệp",
-      "rag_prediction": "The main difference between closed-book QA and Retrieval Augmented Generation (RAG) lies in how it handles the data. In closed-book QA, the questions are pre-written and provided to the system as a single question. In contrast, RAG allows the model to generate responses based on context rather than being limited by predefined questions.\n\nThe framework Ragas was designed specifically for Retrieval Augmented Generation (RAG), which aims to improve the quality of answers generated through retrieval while maintaining the ability to handle natural language processing tasks.\n\nNguồn:\n- Không có trích dẫn hợp lệ trong context.",
+      "reader_prediction": "hệ thống retrieval augmented\ngeneration",
+      "rag_prediction": "Sự khác biệt chính giữa closed-book QA và RAG là RAG sử dụng các bộ nhớ ngoài để tự động hóa quá trình đánh giá, giảm thiểu chi phí và thời gian.\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 36)\n- paper/[Reading]-RAG-System.pdf (Page 56)\n- paper/[Reading]-RAG-System.pdf (Page 4)",
       "retrieved_sources": [
-        "paper/[reading]-rag-system.pdf (page 1)",
         "paper/[reading]-rag-system.pdf (page 36)",
+        "paper/[reading]-rag-system.pdf (page 39)",
         "paper/[reading]-rag-system.pdf (page 4)",
+        "paper/[reading]-rag-system.pdf (page 5)",
         "paper/[reading]-rag-system.pdf (page 56)"
       ],
       "expected_sources": [
@@ -220,19 +247,22 @@
         "[reading]-rag-system.pdf (page 5)"
       ],
       "rag_citations": [
-        "không có trích dẫn hợp lệ trong context."
+        "paper/[reading]-rag-system.pdf (page 36)",
+        "paper/[reading]-rag-system.pdf (page 4)",
+        "paper/[reading]-rag-system.pdf (page 56)"
       ]
     },
     {
       "id": "q011",
       "question": "Top-k retrieval ảnh hưởng thế nào đến chất lượng và chi phí suy luận?",
       "expected_answer": "Top-k cao tăng khả năng tìm đúng context nhưng cũng tăng nhiễu, làm prompt dài hơn và tốn chi phí hơn.",
-      "reader_prediction": "bỏ khỏi top-k kết quả tìm kiếm",
-      "rag_prediction": "Based on the information provided, top-k retrieval can improve the quality and cost-effectiveness of summarization.\n\nNguồn:\n- Không có trích dẫn hợp lệ trong context.",
+      "reader_prediction": "Output trả\nvề chỉ là danh sách các đoạn văn bản (Top-K) kèm điểm số/metadata",
+      "rag_prediction": "Top-k retrieval có thể cải thiện chất lượng và chi phí suy luận, tăng độ chính xác và hiệu suất hơn so với các phương pháp hiện hành.\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 85)\n- paper/[Reading]-RAG-System.pdf (Page 112)\n- paper/[Reading]-RAG-System.pdf (Page 49)",
       "retrieved_sources": [
-        "paper/[reading]-rag-system.pdf (page 10)",
-        "paper/[reading]-rag-system.pdf (page 108)",
-        "paper/[reading]-rag-system.pdf (page 11)",
+        "paper/[reading]-rag-system.pdf (page 107)",
+        "paper/[reading]-rag-system.pdf (page 112)",
+        "paper/[reading]-rag-system.pdf (page 16)",
+        "paper/[reading]-rag-system.pdf (page 49)",
         "paper/[reading]-rag-system.pdf (page 85)"
       ],
       "expected_sources": [
@@ -242,40 +272,45 @@
         "[reading]-rag-system.pdf (page 60)"
       ],
       "rag_citations": [
-        "không có trích dẫn hợp lệ trong context."
+        "paper/[reading]-rag-system.pdf (page 112)",
+        "paper/[reading]-rag-system.pdf (page 49)",
+        "paper/[reading]-rag-system.pdf (page 85)"
       ]
     },
     {
       "id": "q012",
       "question": "Score threshold trong retrieval thường được dùng để làm gì?",
       "expected_answer": "Similarity score threshold dùng để lọc bỏ các chunk có độ tương đồng thấp.",
-      "reader_prediction": "không làm\nmất mát các thông tin quan trọng",
-      "rag_prediction": "Dựa trên nội dung bài viết, hằng số k (60) thường được dùng để làm mượt điểm số, ngăn không cho các tài liệu ở Top 1 có điểm số quá áp đảo so với các tài liệu ở hạng 2, 3.\n\nNguồn:\n- Không có trích dẫn hợp lệ trong context.",
+      "reader_prediction": "Sử dụng nghịch đảo của thứ hạng (ri)",
+      "rag_prediction": "Score threshold trong retrieval thường được dùng để làm mượt điểm số, ngăn không cho các tài liệu ở Top 1 có điểm số quá áp đảo so với các tài liệu ở hạng 2, 3.\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 112)\n- paper/[Reading]-RAG-System.pdf (Page 11)\n- paper/[Reading]-RAG-System.pdf (Page 49)",
       "retrieved_sources": [
         "paper/[reading]-rag-system.pdf (page 10)",
+        "paper/[reading]-rag-system.pdf (page 108)",
         "paper/[reading]-rag-system.pdf (page 11)",
         "paper/[reading]-rag-system.pdf (page 112)",
-        "paper/[reading]-rag-system.pdf (page 49)",
-        "paper/[reading]-rag-system.pdf (page 85)"
+        "paper/[reading]-rag-system.pdf (page 49)"
       ],
       "expected_sources": [
         "[reading]-rag-system.pdf (page 19)"
       ],
       "rag_citations": [
-        "không có trích dẫn hợp lệ trong context."
+        "paper/[reading]-rag-system.pdf (page 11)",
+        "paper/[reading]-rag-system.pdf (page 112)",
+        "paper/[reading]-rag-system.pdf (page 49)"
       ]
     },
     {
       "id": "q013",
       "question": "Khi nào cần reranking sau bước similarity search ban đầu?",
       "expected_answer": "Reranking dùng khi muốn xếp lại các ứng viên sau truy xuất ban đầu để giữ lại chunk liên quan nhất, nhất là khi lấy nhiều ứng viên trước rồi cắt xuống top_k.",
-      "reader_prediction": "3",
-      "rag_prediction": "4. Re-ranking\nSau khi có được tập ứng viên (ví dụ: Top 50 tài liệu) từ bước trên, thứ tự của chúng có thể chưa hoàn toàn chính xác do vector chỉ là dạng nén thông tin.\n4. Re-ranking\nSau khi có được tập ứng viên (ví dụ: Top 50 tài liệu) từ bước trên, thứ tự của chúng có thể chưa hoàn toàn chính xác do vector chỉ là dạng nén thông tin.\n\nNguồn:\n- Không có trích dẫn hợp lệ trong context.",
+      "reader_prediction": "số lượng tài liệu được truy xuất ban đầu\nvà số lượng tài liệu được giữ lại sau khi rerank",
+      "rag_prediction": "Tùy thuộc vào độ chính xác và độ chính tả của truy vấn, nên chọn chiến lược nào.\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 48)\n- paper/[Reading]-RAG-System.pdf (Page 101)\n- paper/[Reading]-RAG-System.pdf (Page 11)",
       "retrieved_sources": [
         "paper/[reading]-rag-system.pdf (page 101)",
+        "paper/[reading]-rag-system.pdf (page 105)",
         "paper/[reading]-rag-system.pdf (page 11)",
-        "paper/[reading]-rag-system.pdf (page 111)",
-        "paper/[reading]-rag-system.pdf (page 48)"
+        "paper/[reading]-rag-system.pdf (page 48)",
+        "paper/[reading]-rag-system.pdf (page 85)"
       ],
       "expected_sources": [
         "[reading]-rag-system.pdf (page 101)",
@@ -284,21 +319,23 @@
         "[reading]-rag-system.pdf (page 104)"
       ],
       "rag_citations": [
-        "không có trích dẫn hợp lệ trong context."
+        "paper/[reading]-rag-system.pdf (page 101)",
+        "paper/[reading]-rag-system.pdf (page 11)",
+        "paper/[reading]-rag-system.pdf (page 48)"
       ]
     },
     {
       "id": "q014",
       "question": "Reader extractive QA bổ trợ cho bước generator như thế nào?",
       "expected_answer": "Reader extractive QA trích span đáp án từ chunk truy xuất và đưa tín hiệu grounded cho generator, nên câu trả lời cuối sát context hơn.",
-      "reader_prediction": "Tổng hợp các đoạn văn bản tìm được từ tất cả các bước trên và đưa cho\nLLM để trả lời câu hỏi gốc ban đầu",
-      "rag_prediction": "Reader extractive QA giúp bổ trợ cho bước generator bằng cách:\n1. Tách câu hỏi đa ý thành các câu hỏi đơn ý.\n2. Thực hiện tìm kiếm tài liệu cho từng câu hỏi phụ riêng biệt.\n3. Tổng hợp các đoạn văn bản tìm được từ tất cả các bước trên và đưa cho LLM để trả lời câu hỏi gốc ban đầu.\n\nSource: paper/[Reading]-RAG-System.pdf (Page 51)\nSource: paper/[Reading]-RAG-System.pdf (Page 101)\nSource: paper/[Reading]-RAG-System.pdf (Page 11)\n\nNguồn:\n- Không có trích dẫn hợp lệ trong context.",
+      "reader_prediction": "thông\ntin sai hoặc thiếu, LLM sẽ không có đủ dữ liệu để trả lời",
+      "rag_prediction": "Reader extractive QA bổ trợ cho bước generator bằng cách sử dụng các phương pháp tối ưu hóa để phân tích và trả lời câu hỏi từ dữ liệu gốc. Dữ liệu gốc được chuyển đổi thành dạng Vector, giúp LLM tìm kiếm thông tin hiệu quả hơn. Phương pháp này bao gồm:\n\n1. Query Processing: LLM sử dụng Embedding model để tạo vector truy vấn q. 2. Decomposition: LLM phân tích câu hỏi thành các câu hỏi con đơn giản hơn. 3. Decomposition Batch RAG: LLM sử dụng phương pháp decompose để phân tích\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 62)\n- paper/[Reading]-RAG-System.pdf (Page 39)\n- paper/[Reading]-RAG-System.pdf (Page 65)",
       "retrieved_sources": [
-        "paper/[reading]-rag-system.pdf (page 101)",
-        "paper/[reading]-rag-system.pdf (page 11)",
-        "paper/[reading]-rag-system.pdf (page 51)",
-        "paper/[reading]-rag-system.pdf (page 82)",
-        "paper/[reading]-rag-system.pdf (page 86)"
+        "paper/[reading]-rag-system.pdf (page 39)",
+        "paper/[reading]-rag-system.pdf (page 62)",
+        "paper/[reading]-rag-system.pdf (page 65)",
+        "paper/[reading]-rag-system.pdf (page 9)",
+        "paper/[reading]-rag-system.pdf (page 98)"
       ],
       "expected_sources": [
         "[reading]-rag-system.pdf (page 20)",
@@ -307,40 +344,44 @@
         "[reading]-rag-system.pdf (page 5)"
       ],
       "rag_citations": [
-        "không có trích dẫn hợp lệ trong context."
+        "paper/[reading]-rag-system.pdf (page 39)",
+        "paper/[reading]-rag-system.pdf (page 62)",
+        "paper/[reading]-rag-system.pdf (page 65)"
       ]
     },
     {
       "id": "q015",
       "question": "ONNX quantization mang lại lợi ích gì cho inference CPU?",
       "expected_answer": "ONNX quantization giúp model nhỏ hơn nhiều và inference CPU nhanh, nhẹ hơn.",
-      "reader_prediction": "làm\nloãng mật độ thông tin hữu ích",
-      "rag_prediction": "ONNX (Open Neural Network Exchange) là một mô hình deep learning được phát triển bởi Alibaba Cloud. Tuy nhiên, trên thực tế, ONNX không phải là một mô hình được phát triển bởi Alibaba Cloud. ONNX được phát triển bởi Google.\n\nONNX giúp tối ưu hóa việc chuyển đổi từ mô hình neural network sang máy tính xách tay (CPU) và giảm thiểu thời gian tải về máy chủ. Nó cũng giúp cải thiện hiệu suất của mô hình trong quá trình inference trên CPU.\n\nCác lợi ích chính của ONNX cho inference CPU bao gồm:\n\n1. Tăng hiệu suất: ONNX giúp tối ưu hóa việc chuyển đổi từ mô hình neural network sang máy tính xách tay, giảm thiểu thời gian tải về máy chủ và tăng hiệu suất inference.\n2. Giảm能耗: ONNX sử dụng công nghệ phân tích sâu (DNN) để tối ưu hóa việc chuyển đổi từ mô hình neural network sang máy tính xách tay, giúp giảm thiểu能耗 và giảm lượng dữ liệu lưu trữ.\n3. Tăng khả năng phân tích: ONNX có thể tối ưu hóa quá trình phân tích của mô hình để tăng hiệu suất và hiệu quả.\n\nCác lợi ích này cho phép ONNX được sử dụng rộng rãi trong việc chuyển đổi từ mô hình neural network sang máy tính xách tay, giúp cải thiện hiệu suất inference trên CPU.\n\nNguồn:\n- Không có trích dẫn hợp lệ trong context.",
+      "reader_prediction": "mang lại kết quả đặc thù",
+      "rag_prediction": "ONNX quantization improves inference performance on CPUs by reducing model size and improving accuracy.\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 107)\n- paper/[Reading]-RAG-System.pdf (Page 85)\n- paper/[Reading]-RAG-System.pdf (Page 93)",
       "retrieved_sources": [
         "paper/[reading]-rag-system.pdf (page 107)",
-        "paper/[reading]-rag-system.pdf (page 45)",
+        "paper/[reading]-rag-system.pdf (page 38)",
+        "paper/[reading]-rag-system.pdf (page 43)",
         "paper/[reading]-rag-system.pdf (page 85)",
-        "paper/[reading]-rag-system.pdf (page 90)",
         "paper/[reading]-rag-system.pdf (page 93)"
       ],
       "expected_sources": [
         "src/training/export.py (page n/a)"
       ],
       "rag_citations": [
-        "không có trích dẫn hợp lệ trong context."
+        "paper/[reading]-rag-system.pdf (page 107)",
+        "paper/[reading]-rag-system.pdf (page 85)",
+        "paper/[reading]-rag-system.pdf (page 93)"
       ]
     },
     {
       "id": "q016",
       "question": "Những nguyên nhân phổ biến khiến retrieval trả về context không liên quan là gì?",
       "expected_answer": "Nguyên nhân phổ biến là chunking kém, embedding hoặc score threshold chưa phù hợp, query lệch ngữ nghĩa, hoặc dữ liệu có header/footer nhiễu.",
-      "reader_prediction": "mật độ thông tin hữu ích bị loãng bởi các đoạn văn không liên\nquan trực tiếp đến câu hỏi chính",
-      "rag_prediction": "1. Do hệ thống phải truy xuất cho nhiều câu hỏi con đồng thời, lượng văn bản đổ về quá lớn khiến mật độ thông tin hữu ích bị loãng bởi các đoạn văn không liên quan trực tiếp đến câu hỏi chính.\n2. AI VIET NAM (AIO2026) aivietnam.edu.vn\n3. 4.7 Đánh giá RAG\n4. 1 if EVAL_SAMPLE_SIZE is not None:\n5. 2 eval_subset = eval_df.sample(\n6. 3 n=min(EVAL_SAMPLE_SIZE, len(eval_df)), random_state=SEED\n7. 4 )\n8. 5 else:\n9. 6 eval_subset = eval_df\n\n8. 7 eval_dataset = Dataset.from_pandas(eval_subset.reset_index(drop=True))\n\n10. 10 wrapped_embeddings = LangchainEmbeddingsWrapper(\n11. OpenAIEmbeddings(model=\"text-embedding-3-small\")\n12. )\n\n14. run_config = RunConfig(\n15. max_workers=EVAL_MAX_WORKERS,\n16. timeout=EVAL_TIMEOUT,\n17. max_retries=1,\n18. max_wait=60,\n19. )\n\n21. ragas_results = evaluate(\n22. dataset=eval_dataset,\n23. metrics=[\n24. faithfulness,\n25. answer_relevancy,\n26. context_precision,\n27. context_recall\n28. ],\n29. embeddings=wrapped_embeddings,\n30. run_config=run_config,\n31. raise_exceptions=False,\n32. )\n\n---\n\nPrevious Conversation History:\n- Ở đây, tôi cần tìm hiểu về nguyên nhân gây ra vấn đề khi hệ thống truy xuất nhiều câu hỏi con đồng thời và lượng văn bản đổ về quá lớn.\n- Ở đây, tôi cần biết nguyên nhân khiến retrieval trả về context không liên quan là gì.\n- Ở đây, tôi cần biết nguyên nhân khiến việc sử dụng RAG (Relevance-Aware Generation) có thể loãng mật độ thông tin hữu ích.\n\nNguồn:\n- Không có trích dẫn hợp lệ trong context.",
+      "reader_prediction": "cáccontext hữu ích",
+      "rag_prediction": "1. Faithfulness (0.73): Chất lượng của LLM tốt, nhưng chưa đủ để phân tích đầy đủ thông tin. 2. Answer Relevancy (0.53): Độ chính xác thấp, dẫn đầu trong 4 tiêu chí. 3. Context Precision (0.81): Chỉ số cao nhất, nhưng context không liên quan nên giảm 0.24 điểm. 4. Context Recall (0.67): Trung bình, chưa đủ thông tin cần thiết. Source: paper/[Reading]-RAG-System.pdf (Page\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 90)\n- paper/[Reading]-RAG-System.pdf (Page 107)\n- paper/[Reading]-RAG-System.pdf (Page 80)",
       "retrieved_sources": [
-        "paper/[reading]-rag-system.pdf (page 100)",
-        "paper/[reading]-rag-system.pdf (page 3)",
-        "paper/[reading]-rag-system.pdf (page 78)",
-        "paper/[reading]-rag-system.pdf (page 87)",
+        "paper/[reading]-rag-system.pdf (page 107)",
+        "paper/[reading]-rag-system.pdf (page 110)",
+        "paper/[reading]-rag-system.pdf (page 59)",
+        "paper/[reading]-rag-system.pdf (page 80)",
         "paper/[reading]-rag-system.pdf (page 90)"
       ],
       "expected_sources": [
@@ -353,19 +394,21 @@
         "[reading]-rag-system.pdf (page 82)"
       ],
       "rag_citations": [
-        "không có trích dẫn hợp lệ trong context."
+        "paper/[reading]-rag-system.pdf (page 107)",
+        "paper/[reading]-rag-system.pdf (page 80)",
+        "paper/[reading]-rag-system.pdf (page 90)"
       ]
     },
     {
       "id": "q017",
       "question": "Một chiến lược đánh giá hiệu quả retrieval thường gồm các chỉ số nào?",
       "expected_answer": "Với retrieval, thường dùng Context Precision và Context Recall; với generation, thêm Faithfulness và Answer Relevancy.",
-      "reader_prediction": "tên riêng, mã số sản phẩm, hoặc các thuật ngữ chuyên ngành hiếm gặp",
-      "rag_prediction": "Based on the information provided, the three main metrics for evaluating retrieval strategies are:\n\n1. **Context Recall**: This measures how well the retrieval system can recall relevant documents based on their content.\n2. **Total Recall (Recall)**: This is the proportion of actual documents that the retrieval system correctly identifies as being in the document set.\n3. **Precision and Recall**: These metrics help evaluate the overall performance of the retrieval system, including its ability to find relevant documents while also identifying those it doesn't.\n\nThe context mentions that Sparse Retrieval (with BM25) is a strategy that combines both Dense Retrieval and Sparse Retrieval to improve recall and precision.\n\nNguồn:\n- Không có trích dẫn hợp lệ trong context.",
+      "reader_prediction": "“503",
+      "rag_prediction": "1. Faithfulness (độ phù hợp)\n2. Answer Relevancy (điều kiện trả lời)\n3. Context Recall (điều kiện liên quan)\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 108)\n- paper/[Reading]-RAG-System.pdf (Page 85)\n- paper/[Reading]-RAG-System.pdf (Page 107)",
       "retrieved_sources": [
+        "paper/[reading]-rag-system.pdf (page 105)",
         "paper/[reading]-rag-system.pdf (page 107)",
         "paper/[reading]-rag-system.pdf (page 108)",
-        "paper/[reading]-rag-system.pdf (page 38)",
         "paper/[reading]-rag-system.pdf (page 46)",
         "paper/[reading]-rag-system.pdf (page 85)"
       ],
@@ -376,20 +419,23 @@
         "[reading]-rag-system.pdf (page 60)"
       ],
       "rag_citations": [
-        "không có trích dẫn hợp lệ trong context."
+        "paper/[reading]-rag-system.pdf (page 107)",
+        "paper/[reading]-rag-system.pdf (page 108)",
+        "paper/[reading]-rag-system.pdf (page 85)"
       ]
     },
     {
       "id": "q018",
       "question": "Vì sao cần lưu nguồn (source/page) trong câu trả lời cuối cùng?",
       "expected_answer": "Để audit được bằng chứng, tăng khả năng kiểm tra và giảm cite sai hoặc hallucination.",
-      "reader_prediction": "giúp mô hình có thể diễn đạt cùng một ý theo\nnhiều văn phong khác nhau trong mỗi lần chạy",
-      "rag_prediction": "The answer states \"Việc chuyển dịch từ Recursive sang Semantic Chunking xuất phát từ nhu cầu khắc phục sự rời rạc của dữ liệu đầu vào. Chúng ta kỳ vọng rằng khi các chunk chứa đựng thông tin trọn vẹn hơn, Retriever sẽ tìm kiếm chính xác hơn, tăng chỉ số Context Recall, từ đó tạo tiền đề để LLM trả lời đúng trọng tâm hơn.\" However, the context does not explicitly mention that this is a requirement for the final answer. Therefore, based on the information provided, I don't know if it's explicitly stated as a requirement or not.\n\n`Nguồn:`: 1. Cross-Encoder.\n2. MMR.\n3. Lưu ý: Trong từng thực nghiệm, nếu bất kỳ thành phần nào không được đề cập, thì sẽ giữ nguyên như trong baseline VII.4..\n\nNguồn:\n- Không có trích dẫn hợp lệ trong context.",
+      "reader_prediction": "ép LLM trả lời ngay lập tức, nó rất\ndễ đoán mò",
+      "rag_prediction": "Vì vì LLM tự sinh ra quy trình: \"Bước 1: Tìm giá gói A... Bước 2: Tìm giá gói B... Bước 3: So sánh...\"→ Kết luận chính xác hơn đáng kể.\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 14)\n- paper/[Reading]-RAG-System.pdf (Page 52)\n- paper/[Reading]-RAG-System.pdf (Page 16)",
       "retrieved_sources": [
         "paper/[reading]-rag-system.pdf (page 112)",
         "paper/[reading]-rag-system.pdf (page 14)",
-        "paper/[reading]-rag-system.pdf (page 33)",
-        "paper/[reading]-rag-system.pdf (page 81)"
+        "paper/[reading]-rag-system.pdf (page 16)",
+        "paper/[reading]-rag-system.pdf (page 31)",
+        "paper/[reading]-rag-system.pdf (page 52)"
       ],
       "expected_sources": [
         "[reading]-rag-system.pdf (page 56)",
@@ -398,21 +444,23 @@
         "[reading]-rag-system.pdf (page 60)"
       ],
       "rag_citations": [
-        "không có trích dẫn hợp lệ trong context."
+        "paper/[reading]-rag-system.pdf (page 14)",
+        "paper/[reading]-rag-system.pdf (page 16)",
+        "paper/[reading]-rag-system.pdf (page 52)"
       ]
     },
     {
       "id": "q019",
       "question": "Trong tài liệu, các rủi ro kỹ thuật nào thường gặp khi vận hành RAG ở production?",
       "expected_answer": "Các rủi ro thường gặp là hallucination, retrieval nhiễu, chunking hoặc citation sai, phụ thuộc artifact và đường dẫn, và chất lượng chưa được đo bằng eval.",
-      "reader_prediction": "Retrieval Augmented Generation",
-      "rag_prediction": "1. Fixed-size Chunking làm đứt gãy mạch văn, khiến Retriever không tìm thấy đủ thông tin.\n2. LLMs có thể bị giới hạn bởi tri thức và hiện tượng ảo giác khi gặp câu hỏi ngoài vùng tri thức.\n3. LLMs thiếu kiến thức về dữ liệu riêng tư của doanh nghiệp.\n\nNguồn:\n- Không có trích dẫn hợp lệ trong context.",
+      "reader_prediction": "tài liệu nội bộ hoặc dữ liệu nhạy cảm",
+      "rag_prediction": "1. Chất lượng generation: RAG có thể tạo ra câu trả lời không chính xác hoặc thiếu thông tin. 2. Thời gian xử lý: RAG có thể mất nhiều thời gian để xử lý và tối ưu hóa dữ liệu. 3. Tính năng nâng cao: RAG có thể gặp vấn đề về hiệu suất khi sử dụng các kỹ thuật nâng cao. 4. Dữ liệu nhập: Dữ liệu nhập từ các nguồn khác nhau có thể ảnh hưởng đến hiệu suất của RAG. 5. Thời gian thực: RAG có thể mất\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 39)\n- paper/[Reading]-RAG-System.pdf (Page 33)\n- paper/[Reading]-RAG-System.pdf (Page 60)",
       "retrieved_sources": [
-        "paper/[reading]-rag-system.pdf (page 1)",
+        "paper/[reading]-rag-system.pdf (page 33)",
         "paper/[reading]-rag-system.pdf (page 39)",
-        "paper/[reading]-rag-system.pdf (page 55)",
-        "paper/[reading]-rag-system.pdf (page 60)",
-        "paper/[reading]-rag-system.pdf (page 80)"
+        "paper/[reading]-rag-system.pdf (page 5)",
+        "paper/[reading]-rag-system.pdf (page 56)",
+        "paper/[reading]-rag-system.pdf (page 60)"
       ],
       "expected_sources": [
         "[reading]-rag-system.pdf (page 101)",
@@ -424,18 +472,21 @@
         "[reading]-rag-system.pdf (page 82)"
       ],
       "rag_citations": [
-        "không có trích dẫn hợp lệ trong context."
+        "paper/[reading]-rag-system.pdf (page 33)",
+        "paper/[reading]-rag-system.pdf (page 39)",
+        "paper/[reading]-rag-system.pdf (page 60)"
       ]
     },
     {
       "id": "q020",
       "question": "Các bước tối thiểu để xây dựng một pipeline RAG end-to-end là gì?",
       "expected_answer": "Load PDF, làm sạch và chunking, embedding/index, retrieval top-k, rồi generation và trả lời kèm nguồn.",
-      "reader_prediction": "xử lý dữ liệu, truy xuất và sinh nội dung",
-      "rag_prediction": "1. Chuẩn bị môi trường và cấu trúc dự án\n2. Cài đặt thư viện\n3. Xây dựng giao diện ứng dụng\n4. Xây dựng giao diện với Gradio Blocks\n\nNguồn:\n- Không có trích dẫn hợp lệ trong context.",
+      "reader_prediction": "quá trình xây dựng và mở rộng hệ thống trong\ncác bước tiếp theo diễn ra thuận lợi và có hệ thống",
+      "rag_prediction": "4.1 Cài đặt thư viện\n1!pip install -q \\\n2 \"langchain>=0.2.0\" \\\n3 \"langchain-core>=0.2.0\" \\\n4 \"langchain-community>=0.1.0\" \\\n5 \"langchain-text-splitters>=0.2.0\" \\\n6 \"sentence-transformers>=2.2.0\" \\\n7 \"langchain-huggingface>=0.0.1\" \\\n8 \"chromadb>=0.5.0\" \\\n9 \"langchain-chroma>=0.2\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 67)\n- paper/[Reading]-RAG-System.pdf (Page 21)\n- paper/[Reading]-RAG-System.pdf (Page 39)",
       "retrieved_sources": [
         "paper/[reading]-rag-system.pdf (page 21)",
         "paper/[reading]-rag-system.pdf (page 29)",
+        "paper/[reading]-rag-system.pdf (page 33)",
         "paper/[reading]-rag-system.pdf (page 39)",
         "paper/[reading]-rag-system.pdf (page 67)"
       ],
@@ -447,7 +498,9 @@
         "[reading]-rag-system.pdf (page 29)"
       ],
       "rag_citations": [
-        "không có trích dẫn hợp lệ trong context."
+        "paper/[reading]-rag-system.pdf (page 21)",
+        "paper/[reading]-rag-system.pdf (page 39)",
+        "paper/[reading]-rag-system.pdf (page 67)"
       ]
     }
   ]

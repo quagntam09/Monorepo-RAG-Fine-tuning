@@ -130,8 +130,37 @@ def _split_answer_and_sources(answer: str) -> tuple[str, list[str]]:
     return body, source_lines
 
 
+def _deduplicate_text(text: str) -> str:
+    # 1. Line-level deduplication
+    lines = (text or "").splitlines()
+    deduped_lines = []
+    seen_lines = set()
+    for line in lines:
+        cleaned_line = " ".join(line.strip().lower().split())
+        if cleaned_line:
+            if cleaned_line in seen_lines:
+                continue
+            seen_lines.add(cleaned_line)
+        deduped_lines.append(line)
+    text = "\n".join(deduped_lines).strip()
+
+    # 2. Sentence-level deduplication (for intra-line loops)
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    deduped_sentences = []
+    seen_sentences = set()
+    for sentence in sentences:
+        cleaned_sentence = " ".join(sentence.strip().lower().split())
+        if cleaned_sentence:
+            if cleaned_sentence in seen_sentences:
+                continue
+            seen_sentences.add(cleaned_sentence)
+        deduped_sentences.append(sentence)
+    return " ".join(deduped_sentences).strip()
+
+
 def _finalize_answer(answer: str, allowed_sources: list[dict[str, Any]]) -> str:
     body, source_lines = _split_answer_and_sources(answer)
+    body = _deduplicate_text(body)
 
     if not allowed_sources:
         body = body.strip() or "Mình không biết."
@@ -340,7 +369,12 @@ def build_chatbot(
         )
 
     prompt = ChatPromptTemplate.from_template(PROMPT_TEMPLATE)
-    llm = OllamaLLM(model=config.llm_model, temperature=config.temperature)
+    llm = OllamaLLM(
+        model=config.llm_model,
+        temperature=config.temperature,
+        num_predict=120,
+        base_url=config.ollama_base_url,
+    )
     runtime_state: dict[str, Any] = {"allowed_sources": [], "debug_trace": None}
 
     def _prepare_payload(question: str, chat_history: str) -> dict[str, Any]:

@@ -55,7 +55,11 @@ def create_app() -> FastAPI:
         app.state.config = config
         app.state.retriever = retriever
         app.state.prompt = ChatPromptTemplate.from_template(PROMPT_TEMPLATE)
-        app.state.llm = OllamaLLM(model=config.llm_model, temperature=config.temperature)
+        app.state.llm = OllamaLLM(
+            model=config.llm_model,
+            temperature=config.temperature,
+            base_url=config.ollama_base_url,
+        )
         app.state.reader_service_url = os.getenv("RAG_READER_SERVICE_URL", "http://localhost:8081").rstrip("/")
         app.state.timeout_sec = float(os.getenv("RAG_READER_SERVICE_TIMEOUT_SEC", "30"))
         yield

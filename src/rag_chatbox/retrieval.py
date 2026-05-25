@@ -81,7 +81,7 @@ class _TTLCache(Generic[T]):
 
 
 def _build_embeddings(config: AppConfig) -> OllamaEmbeddings:
-    return OllamaEmbeddings(model=config.embedding_model)
+    return OllamaEmbeddings(model=config.embedding_model, base_url=config.ollama_base_url)
 
 
 def _fingerprint_documents(documents: list[Document]) -> str:
@@ -211,7 +211,11 @@ def _build_query_rewriter(config: AppConfig) -> Callable[[str], list[str]] | Non
         logger.warning("Query rewriting is enabled but no rewrite model is configured; fallback to original query")
         return None
 
-    llm = OllamaLLM(model=rewrite_model, temperature=config.query_rewrite_temperature)
+    llm = OllamaLLM(
+        model=rewrite_model,
+        temperature=config.query_rewrite_temperature,
+        base_url=config.ollama_base_url,
+    )
     max_variants = max(0, config.query_rewrite_max_variants)
 
     def rewrite(question: str) -> list[str]:
