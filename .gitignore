@@ -12,4 +12,3 @@ paper/
 *.pdf
 deploy/.env
 deploy/*.log
-tests/

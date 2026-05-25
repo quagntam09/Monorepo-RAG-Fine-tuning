@@ -1,0 +1,248 @@
+{
+  "summary": {
+    "samples": 10,
+    "requested_samples": 10,
+    "mode": "rag",
+    "top_k": 5,
+    "truncated_by_runtime": false,
+    "retrieval_hit_rate": 0.6,
+    "reader_exact_match": 0.0,
+    "reader_f1": 0.13580462220706124,
+    "rag_exact_match": 0.0,
+    "rag_f1": 0.12238194451194465,
+    "citation_hit_rate": 0.5,
+    "rag_timeout_count": 1
+  },
+  "rows": [
+    {
+      "id": "q001",
+      "question": "RAG là gì và mục tiêu chính của kiến trúc này là gì?",
+      "expected_answer": "RAG là kiến trúc Retrieve and Prompt: hệ thống truy xuất tài liệu bên ngoài rồi đưa vào prompt để LLM sinh câu trả lời grounded, nhằm giảm hallucination và vượt giới hạn knowledge cutoff.",
+      "reader_prediction": "chuyển đổi dữ liệu thô từ nhiều định dạng khác nhau thành một\nđịnh dạng thống nhất để hệ thống có thể tìm kiếm được",
+      "rag_prediction": "RAG (Retrieval-Augmented Generation) là một giải pháp kiến trúc nhằm khắc phục hai giới hạn cố hữu của LLM: hallucination và sự thiếu hụt tri thứ tự cập nhật và riêng tư. RAG không phụ thuộc hoàn toàn vào bộ nhớ tham số được cố định sau huấn luyện,而是 trang bị cho LLM khả năng tra cứu thời gian thực từ các bộ nhớ ngoài. Hệ thống RAG sử dụng pipeline RAG hoàn chỉnh vận hành dựa trên 3 giai đoạn chính như hình 2:\n\n1. Indexing: Đây là giai đoạn chuẩn bị dữ liệu. Mục tiêu là chuyển đổi tri thức thô thành biểu diễn mà máy tính có thể tìm kiếm hiệu quả.\n2. Retrieval: Đây là giai đoạn xử lý các tài liệu ẩn (latent documents) từ bộ nhớ ngoài, cụ thể là một dense vector index chứa các đoạn văn bản Wikipedia.\n3. Generation: Đây là giai đoạn xử lý văn bản dựa trên mô hình LLM và các tài liệu ẩn.\n\nRAG gốc cho phép Generator (BART) sử dụng đầu vào kết hợp với các tài liệu ẩn (latent documents) tìm được từ Retriever để sinh văn bản. Điểm đặc biệt là toàn bộ kiến trúc này được fine-tuning end-to-end, cho phép cập nhật trọng số của cả Query Encoder và Generator để tối ưu hóa tác vụ đích.\n\nRAG hiện đại thường sử dụng phương pháp In-Context Learning (LLM) để xử lý dữ liệu phức tạp hơn, với sự tăng trưởng mạnh mẽ của các LLM có khả năng hiểu ngữ cảnh rộng.\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 39)\n- paper/[Reading]-RAG-System.pdf (Page 4)\n- paper/[Reading]-RAG-System.pdf (Page 5)",
+      "retrieved_sources": [
+        "paper/[reading]-rag-system.pdf (page 36)",
+        "paper/[reading]-rag-system.pdf (page 39)",
+        "paper/[reading]-rag-system.pdf (page 4)",
+        "paper/[reading]-rag-system.pdf (page 5)"
+      ],
+      "expected_sources": [
+        "[reading]-rag-system.pdf (page 4)",
+        "[reading]-rag-system.pdf (page 5)"
+      ],
+      "rag_citations": [
+        "paper/[reading]-rag-system.pdf (page 39)",
+        "paper/[reading]-rag-system.pdf (page 4)",
+        "paper/[reading]-rag-system.pdf (page 5)"
+      ]
+    },
+    {
+      "id": "q002",
+      "question": "Một hệ thống RAG thường gồm những thành phần chính nào?",
+      "expected_answer": "Một hệ thống RAG thường gồm document loader, splitter/chunking, embedding model, vector store, retriever và LLM/generator.",
+      "reader_prediction": "Indexing, Retrieval và Generation",
+      "rag_prediction": "I don't know.",
+      "retrieved_sources": [
+        "paper/[reading]-rag-system.pdf (page 17)",
+        "paper/[reading]-rag-system.pdf (page 39)",
+        "paper/[reading]-rag-system.pdf (page 5)",
+        "paper/[reading]-rag-system.pdf (page 80)"
+      ],
+      "expected_sources": [
+        "[reading]-rag-system.pdf (page 17)",
+        "[reading]-rag-system.pdf (page 18)",
+        "[reading]-rag-system.pdf (page 19)",
+        "[reading]-rag-system.pdf (page 20)",
+        "[reading]-rag-system.pdf (page 21)"
+      ],
+      "rag_citations": []
+    },
+    {
+      "id": "q003",
+      "question": "Trong RAG, retriever có vai trò gì?",
+      "expected_answer": "Retriever truy vấn vector store để lấy top-k chunk liên quan nhất với câu hỏi.",
+      "reader_prediction": "giúp lọc bỏ nhiễu và đưa các tài liệu có độ đồng thuận cao lên đầu danh\nsách",
+      "rag_prediction": "1. Vector Search trả về kết quả quá chậm so với Keyword Search nên cần RRF để đồng bộ hóa thời gian.\n2. A) Vector Search chỉ tìm được từ đồng nghĩa, trong khi RRF giúp loại bỏ các từ đồng nghĩa.\n3. B) BM25 hoạt động bằng cách đếm tần suất xuất hiện chính xác của từ khóa.\n4. C) RRF là thuật toán duy nhất có thể chạy trên GPU để tăng tốc độ xử lý.\n5. D) RRF không phải là thuật toán duy nhất có thể chạy trên GPU để tăng tốc độ xử lý.\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 46)\n- paper/[Reading]-RAG-System.pdf (Page 31)\n- paper/[Reading]-RAG-System.pdf (Page 10)",
+      "retrieved_sources": [
+        "paper/[reading]-rag-system.pdf (page 10)",
+        "paper/[reading]-rag-system.pdf (page 31)",
+        "paper/[reading]-rag-system.pdf (page 46)",
+        "paper/[reading]-rag-system.pdf (page 93)",
+        "paper/[reading]-rag-system.pdf (page 94)"
+      ],
+      "expected_sources": [
+        "[reading]-rag-system.pdf (page 19)"
+      ],
+      "rag_citations": [
+        "paper/[reading]-rag-system.pdf (page 10)",
+        "paper/[reading]-rag-system.pdf (page 31)",
+        "paper/[reading]-rag-system.pdf (page 46)"
+      ]
+    },
+    {
+      "id": "q004",
+      "question": "Trong RAG, generator có vai trò gì?",
+      "expected_answer": "Generator hoặc LLM tổng hợp ngữ cảnh đã truy xuất thành câu trả lời cuối cùng.",
+      "reader_prediction": "vai trò cụ thể của tham sốchunk_overlap=120 trong đoạn\ncode trên là gì?\n(a)",
+      "rag_prediction": "Trong RAG (Retrieval-Augmented Generation), Generator (BART) sử dụng đầu vào kết hợp với các tài liệu ẩn (latent documents) tìm được từ Retriever để sinh văn bản. Điểm đặc biệt là toàn bộ kiến trúc này được fine-tuning end-to-end, cho phép cập nhật trọng số của cả Query Encoder và Generator để tối ưu hóa tác vụ đích.\n\nTrong RAG, vai trò cụ thể của tham số chunk_overlap=120 trong đoạn code trên là:\n- Chia văn bản thành các đoạn nhỏ có kích thước cố định đúng bằng 120 ký tự bất kể cấu trúc câu.\n- Tự động loại bỏ 120 ký tự đặc biệt hoặc khoảng trắng thừa ở đầu mỗi đoạn văn.\n- Duy trì sự liên tục về ngữ cảnh giữa các đoạn liền kề bằng cách lặp lại 120 ký tự cuối cùng của chunk trước sang chunk sau.\n\nVai trò này giúp giảm tải bộ nhớ khi embedding, tăng hiệu suất và tối ưu hóa việc truy cập dữ liệu.\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 4)\n- paper/[Reading]-RAG-System.pdf (Page 66)\n- paper/[Reading]-RAG-System.pdf (Page 33)",
+      "retrieved_sources": [
+        "paper/[reading]-rag-system.pdf (page 33)",
+        "paper/[reading]-rag-system.pdf (page 39)",
+        "paper/[reading]-rag-system.pdf (page 4)",
+        "paper/[reading]-rag-system.pdf (page 56)",
+        "paper/[reading]-rag-system.pdf (page 66)"
+      ],
+      "expected_sources": [
+        "[reading]-rag-system.pdf (page 20)",
+        "[reading]-rag-system.pdf (page 29)",
+        "[reading]-rag-system.pdf (page 4)",
+        "[reading]-rag-system.pdf (page 5)"
+      ],
+      "rag_citations": [
+        "paper/[reading]-rag-system.pdf (page 33)",
+        "paper/[reading]-rag-system.pdf (page 4)",
+        "paper/[reading]-rag-system.pdf (page 66)"
+      ]
+    },
+    {
+      "id": "q005",
+      "question": "Tại sao cần chia nhỏ tài liệu thành các chunk trước khi indexing?",
+      "expected_answer": "Chia nhỏ tài liệu để phù hợp context window, giảm nhiễu và tăng độ chính xác truy xuất.",
+      "reader_prediction": "giúp tăng độ chính xác khi truy xuất",
+      "rag_prediction": "1. Giới hạn Context Window: Các mô hình LLM và Embedding đều có giới hạn về số lượng token đầu vào. Không thể đưa toàn bộ nội dung vào mô hình cùng lúc.\n2. Fixed-size Chunking: Chia văn bản dựa trên số lượng ký tự hoặc token cố định (ví dụ: cứ 500 ký tự thì cắt một lần). Cách này đơn giản nhưng dễ làm mất ngữ nghĩa nhanh chóng nếu điểm cắt rơi vào giữa câu hoặc giữa một ý đang trình bày dở.\n\nSource: paper/[Reading]-RAG-System.pdf (Page 6)\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 6)\n- paper/[Reading]-RAG-System.pdf (Page 18)\n- paper/[Reading]-RAG-System.pdf (Page 8)",
+      "retrieved_sources": [
+        "paper/[reading]-rag-system.pdf (page 18)",
+        "paper/[reading]-rag-system.pdf (page 25)",
+        "paper/[reading]-rag-system.pdf (page 40)",
+        "paper/[reading]-rag-system.pdf (page 6)",
+        "paper/[reading]-rag-system.pdf (page 8)"
+      ],
+      "expected_sources": [
+        "[reading]-rag-system.pdf (page 18)",
+        "[reading]-rag-system.pdf (page 24)",
+        "[reading]-rag-system.pdf (page 25)",
+        "[reading]-rag-system.pdf (page 3)"
+      ],
+      "rag_citations": [
+        "paper/[reading]-rag-system.pdf (page 18)",
+        "paper/[reading]-rag-system.pdf (page 6)",
+        "paper/[reading]-rag-system.pdf (page 8)"
+      ]
+    },
+    {
+      "id": "q006",
+      "question": "Chunk overlap mang lại lợi ích gì trong quá trình truy hồi?",
+      "expected_answer": "Overlap giữ lại phần ngữ cảnh ở ranh giới chunk để tránh mất ý nghĩa khi câu bị cắt.",
+      "reader_prediction": "Để đảm bảo ngữ nghĩa không bị mất tại điểm cắt giữa hai chunk\nliền kề",
+      "rag_prediction": "Chunk overlap giúp đảm bảo ngữ nghĩa không bị mất tại điểm cắt giữa hai chunk liên tiếp, đồng thời cũng giúp LLM xử lý và phân tích khối lượng dữ liệu khổng lồ chỉ trong tích tắc.\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 41)\n- paper/[Reading]-RAG-System.pdf (Page 7)\n- paper/[Reading]-RAG-System.pdf (Page 40)",
+      "retrieved_sources": [
+        "paper/[reading]-rag-system.pdf (page 40)",
+        "paper/[reading]-rag-system.pdf (page 41)",
+        "paper/[reading]-rag-system.pdf (page 7)",
+        "paper/[reading]-rag-system.pdf (page 8)"
+      ],
+      "expected_sources": [
+        "[reading]-rag-system.pdf (page 18)",
+        "[reading]-rag-system.pdf (page 24)",
+        "[reading]-rag-system.pdf (page 25)"
+      ],
+      "rag_citations": [
+        "paper/[reading]-rag-system.pdf (page 40)",
+        "paper/[reading]-rag-system.pdf (page 41)",
+        "paper/[reading]-rag-system.pdf (page 7)"
+      ]
+    },
+    {
+      "id": "q007",
+      "question": "Vector embedding được dùng như thế nào trong bước retrieval?",
+      "expected_answer": "Embedding biến văn bản thành vector; các văn bản gần nghĩa sẽ gần nhau trong không gian vector nên truy xuất ngữ nghĩa được.",
+      "reader_prediction": "là phương pháp phổ biến để lưu trữ và tìm kiếm trên dữ liệu phi cấu trúc",
+      "rag_prediction": "Vector embedding được sử dụng để tạo vector cho mỗi đoạn văn bản, sau đó kết hợp với Vector Search để tìm kiếm thông tin.\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 18)\n- paper/[Reading]-RAG-System.pdf (Page 46)\n- paper/[Reading]-RAG-System.pdf (Page 40)",
+      "retrieved_sources": [
+        "paper/[reading]-rag-system.pdf (page 110)",
+        "paper/[reading]-rag-system.pdf (page 18)",
+        "paper/[reading]-rag-system.pdf (page 40)",
+        "paper/[reading]-rag-system.pdf (page 46)",
+        "paper/[reading]-rag-system.pdf (page 94)"
+      ],
+      "expected_sources": [
+        "[reading]-rag-system.pdf (page 18)"
+      ],
+      "rag_citations": [
+        "paper/[reading]-rag-system.pdf (page 18)",
+        "paper/[reading]-rag-system.pdf (page 40)",
+        "paper/[reading]-rag-system.pdf (page 46)"
+      ]
+    },
+    {
+      "id": "q008",
+      "question": "FAISS hỗ trợ bước nào trong pipeline RAG và vì sao phù hợp?",
+      "expected_answer": "FAISS là vector store/index để lưu vector và thực hiện similarity search nhanh trên tập chunk.",
+      "reader_prediction": "bước tiếp theo",
+      "rag_prediction": "FAISS (Facebook AI Research Semantic Index) không được đề cập trong đoạn văn bản mà bạn đã cung cấp. Dưới đây là một số thông tin liên quan đến FAISS:\n\n- FAISS là một công cụ xử lý dữ liệu semantic, giúp tạo ra các index và phân tích dữ liệu từ các ngôn ngữ khác.\n- Nó không được sử dụng trong đoạn văn bản mà bạn đã cung cấp.\n\nFAISS không có bất kỳ bước nào được đề cập trong đoạn văn bản mà bạn đã cung cấp. Dưới đây là một số thông tin liên quan đến FAISS:\n\n- FAISS không được đề cập trong đoạn văn bản mà bạn đã cung cấp.\n- Dưới đây là một số thông tin liên quan đến FAISS:\n\n  - FAISS không được sử dụng trong đoạn văn bản mà bạn đã cung cấp.\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 62)\n- paper/[Reading]-RAG-System.pdf (Page 56)\n- paper/[Reading]-RAG-System.pdf (Page 77)",
+      "retrieved_sources": [
+        "paper/[reading]-rag-system.pdf (page 21)",
+        "paper/[reading]-rag-system.pdf (page 56)",
+        "paper/[reading]-rag-system.pdf (page 62)",
+        "paper/[reading]-rag-system.pdf (page 67)",
+        "paper/[reading]-rag-system.pdf (page 77)"
+      ],
+      "expected_sources": [
+        "[reading]-rag-system.pdf (page 19)"
+      ],
+      "rag_citations": [
+        "paper/[reading]-rag-system.pdf (page 56)",
+        "paper/[reading]-rag-system.pdf (page 62)",
+        "paper/[reading]-rag-system.pdf (page 77)"
+      ]
+    },
+    {
+      "id": "q009",
+      "question": "RAG giúp giảm hallucination của LLM bằng cơ chế nào?",
+      "expected_answer": "RAG giảm hallucination bằng cách neo câu trả lời vào context truy xuất từ tài liệu bên ngoài thay vì chỉ dựa vào trọng số mô hình.",
+      "reader_prediction": "tối đa băng thông\nAPI và giảm đáng kể tổng thời gian thực nghiệm so với phương pháp gọi tuần tự",
+      "rag_prediction": "RAG giúp giảm hallucination của LLM bằng cách sử dụng kiến trúc In-Context Learning (In-Context Learning), không phụ thuộc vào bộ nhớ tham số được cố định sau huấn luyện.\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 1)\n- paper/[Reading]-RAG-System.pdf (Page 39)\n- paper/[Reading]-RAG-System.pdf (Page 5)",
+      "retrieved_sources": [
+        "paper/[reading]-rag-system.pdf (page 1)",
+        "paper/[reading]-rag-system.pdf (page 39)",
+        "paper/[reading]-rag-system.pdf (page 4)",
+        "paper/[reading]-rag-system.pdf (page 5)",
+        "paper/[reading]-rag-system.pdf (page 73)"
+      ],
+      "expected_sources": [
+        "[reading]-rag-system.pdf (page 3)",
+        "[reading]-rag-system.pdf (page 4)",
+        "[reading]-rag-system.pdf (page 5)",
+        "[reading]-rag-system.pdf (page 56)"
+      ],
+      "rag_citations": [
+        "paper/[reading]-rag-system.pdf (page 1)",
+        "paper/[reading]-rag-system.pdf (page 39)",
+        "paper/[reading]-rag-system.pdf (page 5)"
+      ]
+    },
+    {
+      "id": "q010",
+      "question": "Sự khác biệt chính giữa closed-book QA và RAG là gì?",
+      "expected_answer": "Closed-book QA chỉ dùng tri thức sẵn trong LLM; RAG truy xuất dữ liệu ngoài rồi mới trả lời.",
+      "reader_prediction": "sự thiếu\nhụt kiến thức về dữ liệu riêng tư của doanh nghiệp",
+      "rag_prediction": "The main difference between closed-book QA and Retrieval Augmented Generation (RAG) lies in how it handles data. In closed-book QA, users are provided with a specific set of questions or prompts to answer based on the information they have been given. In contrast, RAG allows LLMs to generate answers without being directly informed about the context beforehand.\n\nThe key differences include:\n\n1. **Context**: RAG can use existing knowledge and data from the context it is trained on to generate answers, whereas in closed-book QA, users are expected to provide specific questions or prompts.\n2. **Answering Quality**: RAG generates answers that are more aligned with the context provided by the user, which helps in providing relevant information without needing explicit instructions.\n3. **Data Handling**: RAG can handle a wider range of data types and formats compared to closed-book QA, as it doesn't rely on pre-defined questions or prompts.\n\nSo, in summary, RAG is more flexible and allows for better handling of context and data than closed-book QA.\n\nNguồn:\n- paper/[Reading]-RAG-System.pdf (Page 56)\n- paper/[Reading]-RAG-System.pdf (Page 36)\n- paper/[Reading]-RAG-System.pdf (Page 60)",
+      "retrieved_sources": [
+        "paper/[reading]-rag-system.pdf (page 1)",
+        "paper/[reading]-rag-system.pdf (page 36)",
+        "paper/[reading]-rag-system.pdf (page 56)",
+        "paper/[reading]-rag-system.pdf (page 60)"
+      ],
+      "expected_sources": [
+        "[reading]-rag-system.pdf (page 20)",
+        "[reading]-rag-system.pdf (page 29)",
+        "[reading]-rag-system.pdf (page 5)"
+      ],
+      "rag_citations": [
+        "paper/[reading]-rag-system.pdf (page 36)",
+        "paper/[reading]-rag-system.pdf (page 56)",
+        "paper/[reading]-rag-system.pdf (page 60)"
+      ]
+    }
+  ]
+}

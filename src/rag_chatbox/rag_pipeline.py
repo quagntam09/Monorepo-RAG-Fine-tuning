@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 from dataclasses import dataclass
 from typing import Any, Callable
@@ -12,32 +13,11 @@ from langchain_ollama import OllamaLLM
 
 from .config import AppConfig
 from .ingestion import load_documents, split_documents
+from .prompt_template import PROMPT_TEMPLATE
 from .reader_distilbert import DistilBertOnnxReader, select_best_reader_answer
 from .retrieval import build_retriever, format_docs_with_metadata
 
 logger = logging.getLogger(__name__)
-
-PROMPT_TEMPLATE = """You are an intelligent assistant. Answer the question based on the following context and extracted answer candidate.
-{context}
-
-Reader Candidate Answer:
-{reader_answer}
-Reader Candidate Score:
-{reader_span_score}
-
-Previous Conversation History:
-{chat_history}
-
-Requirements:
-- Only answer based on the provided context. Ignore personal/world knowledge not present in the context.
-- If the answer is not explicitly supported by the context, say you don't know.
-- Prefer the Reader Candidate Answer when it is supported by context.
-- Always respond in the same language as the user's question. If the user's question is in Vietnamese, respond in Vietnamese.
-- At the end of your response, add a section named `Nguồn:` with bullet points that only reference file/page pairs present in the context.
-- Do not cite a source that is not present in the context block above.
-
-Question: {question}
-Answer:"""
 
 
 @dataclass
@@ -82,6 +62,30 @@ def _page_label(doc: Any) -> str:
 
 def _normalize_source_label(text: str) -> str:
     return " ".join((text or "").strip().lower().split())
+
+
+def _source_basename(source: str) -> str:
+    src = (source or "").strip().replace("\\", "/")
+    return os.path.basename(src) if src else ""
+
+
+def _to_source_page_key(source: str, page: int | str) -> str:
+    source_name = _normalize_source_label(_source_basename(source))
+    page_value = _normalize_source_label(str(page))
+    return f"{source_name}::page::{page_value}"
+
+
+def _label_to_source_page_key(label: str) -> str | None:
+    match = re.match(r"^(?P<source>.+?)\s*\(page\s*(?P<page>[^\)]+)\)\s*$", label.strip(), flags=re.IGNORECASE)
+    if not match:
+        return None
+    source = match.group("source").strip()
+    page_raw = match.group("page").strip()
+    try:
+        page: int | str = int(page_raw)
+    except ValueError:
+        page = page_raw
+    return _to_source_page_key(source, page)
 
 
 def _preview(text: str, limit: int = 160) -> str:
@@ -134,18 +138,42 @@ def _finalize_answer(answer: str, allowed_sources: list[dict[str, Any]]) -> str:
         return body + "\n\nNguồn:\n- Không có trích dẫn hợp lệ trong context."
 
     allowed_labels = {_normalize_source_label(item["label"]): item["label"] for item in allowed_sources}
+    allowed_key_map: dict[str, str] = {}
+    for item in allowed_sources:
+        page = item.get("page", "N/A")
+        key = _to_source_page_key(str(item.get("source", "Unknown")), page)
+        allowed_key_map[key] = str(item.get("label", ""))
 
     valid_sources: list[str] = []
+    seen: set[str] = set()
     for raw_line in source_lines:
         cleaned = re.sub(r"^[\-\*\d\.\)\s]+", "", raw_line).strip()
         key = _normalize_source_label(cleaned)
-        if key in allowed_labels:
-            valid_sources.append(allowed_labels[key])
+        mapped_label = allowed_labels.get(key)
+        if mapped_label:
+            canonical = _normalize_source_label(mapped_label)
+            if canonical not in seen:
+                valid_sources.append(mapped_label)
+                seen.add(canonical)
+            continue
+
+        source_key = _label_to_source_page_key(cleaned)
+        if source_key is None:
+            continue
+        mapped_label = allowed_key_map.get(source_key)
+        if mapped_label:
+            canonical = _normalize_source_label(mapped_label)
+            if canonical not in seen:
+                valid_sources.append(mapped_label)
+                seen.add(canonical)
 
     if not body:
         body = "Mình không biết."
 
     if not valid_sources:
+        fallback_sources = [str(item.get("label", "")) for item in allowed_sources[:3] if item.get("label")]
+        if fallback_sources:
+            return body.rstrip() + "\n\nNguồn:\n" + "\n".join(f"- {label}" for label in fallback_sources)
         return body.rstrip() + "\n\nNguồn:\n- Không có trích dẫn hợp lệ trong context."
 
     return body.rstrip() + "\n\nNguồn:\n" + "\n".join(f"- {label}" for label in valid_sources)

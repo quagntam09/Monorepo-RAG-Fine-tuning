@@ -71,6 +71,34 @@ def _read_json(path: Path) -> dict | None:
         return None
 
 
+def infer_metric_from_checkpoint(checkpoint_dir: str | Path, metric_name: str) -> float | None:
+    checkpoint_path = Path(checkpoint_dir)
+    metric_key = (metric_name or "").strip().lower()
+    if not metric_key:
+        return None
+
+    candidates = [
+        checkpoint_path / "training_result.json",
+        checkpoint_path.parent / "training_result.json",
+    ]
+    for path in candidates:
+        payload = _read_json(path)
+        if not payload:
+            continue
+
+        if "best_metric_name" in payload and "best_metric_value" in payload:
+            name = str(payload.get("best_metric_name", "")).strip().lower()
+            value = payload.get("best_metric_value")
+            if name == metric_key and isinstance(value, (int, float)):
+                return float(value)
+
+        value = payload.get(metric_key)
+        if isinstance(value, (int, float)):
+            return float(value)
+
+    return None
+
+
 def _tokenizer_source(checkpoint_dir: Path, model_name_or_path: str) -> str:
     required = ["tokenizer.json", "tokenizer_config.json"]
     if all((checkpoint_dir / name).exists() for name in required):

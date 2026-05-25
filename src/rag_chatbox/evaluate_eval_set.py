@@ -3,8 +3,11 @@ from __future__ import annotations
 import argparse
 from dataclasses import replace
 import json
+import os
 import re
 from pathlib import Path
+import signal
+import time
 from typing import Any, Sequence
 
 from .config import AppConfig, load_config
@@ -12,6 +15,29 @@ from .ingestion import load_documents, split_documents
 from .rag_pipeline import build_chatbot
 from .reader_distilbert import DistilBertOnnxReader, select_best_reader_answer
 from .retrieval import build_retriever
+
+
+class _EvalTimeout(Exception):
+    pass
+
+
+def _run_with_alarm_timeout(fn, timeout_sec: float):
+    if timeout_sec <= 0:
+        return fn()
+    if not hasattr(signal, "SIGALRM"):
+        return fn()
+
+    def _handler(_signum, _frame):
+        raise _EvalTimeout("rag answer timeout")
+
+    previous_handler = signal.getsignal(signal.SIGALRM)
+    signal.signal(signal.SIGALRM, _handler)
+    signal.setitimer(signal.ITIMER_REAL, timeout_sec)
+    try:
+        return fn()
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0.0)
+        signal.signal(signal.SIGALRM, previous_handler)
 
 
 def normalize_text(text: str) -> str:
@@ -83,6 +109,30 @@ def _page_label(source: str, page: int | str) -> str:
     return f"{source} (Page {page})"
 
 
+def _source_basename(source: str) -> str:
+    src = (source or "").strip().replace("\\", "/")
+    return os.path.basename(src) if src else ""
+
+
+def _to_source_page_key(source: str, page: int | str) -> str:
+    source_name = _normalize_source_label(_source_basename(source))
+    page_value = _normalize_source_label(str(page))
+    return f"{source_name}::page::{page_value}"
+
+
+def _label_to_source_page_key(label: str) -> str | None:
+    match = re.match(r"^(?P<source>.+?)\s*\(page\s*(?P<page>[^\)]+)\)\s*$", label.strip(), flags=re.IGNORECASE)
+    if not match:
+        return None
+    source = match.group("source").strip()
+    page_raw = match.group("page").strip()
+    try:
+        page: int | str = int(page_raw)
+    except ValueError:
+        page = page_raw
+    return _to_source_page_key(source, page)
+
+
 def _parse_expected_source(item: Any) -> tuple[str | None, bool]:
     if isinstance(item, dict):
         source = item.get("source")
@@ -126,6 +176,15 @@ def _doc_source_label(doc: Any) -> str:
     return _normalize_source_label(_page_label(source, page))
 
 
+def _source_keys_from_labels(labels: set[str]) -> set[str]:
+    keys: set[str] = set()
+    for label in labels:
+        key = _label_to_source_page_key(label)
+        if key:
+            keys.add(key)
+    return keys
+
+
 def load_questions(path: Path) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     with path.open("r", encoding="utf-8") as handle:
@@ -159,6 +218,8 @@ def evaluate_eval_set(
     mode: str = "rag",
     top_k: int = 5,
     limit: int = 0,
+    max_runtime_sec: float = 0.0,
+    rag_answer_timeout_sec: float = 0.0,
 ) -> dict[str, Any]:
     runtime_top_k = max(1, int(top_k))
     runtime_fetch_k = max(int(config.fetch_k), runtime_top_k)
@@ -178,19 +239,25 @@ def evaluate_eval_set(
     rag_f1 = 0.0
     citation_hits = 0
     citation_checked = 0
+    rag_timeout_count = 0
+    started_at = time.monotonic()
     rows: list[dict[str, Any]] = []
 
     for row in questions:
+        if max_runtime_sec > 0 and (time.monotonic() - started_at) >= max_runtime_sec:
+            break
         total += 1
         question = row["question"]
         expected_answer = row["expected_answer"]
         expected_sources, source_checkable = _expected_source_labels(row)
+        expected_source_keys = _source_keys_from_labels(expected_sources)
 
         retrieved = retriever(question)[:runtime_top_k]
         retrieved_labels = {_doc_source_label(doc) for doc in retrieved}
-        if source_checkable and expected_sources:
+        retrieved_source_keys = _source_keys_from_labels(retrieved_labels)
+        if source_checkable and expected_source_keys:
             retrieval_checked += 1
-            retrieval_hits += int(bool(retrieved_labels & expected_sources))
+            retrieval_hits += int(bool(retrieved_source_keys & expected_source_keys))
 
         ranked_answers = reader.answer_on_documents(question=question, docs=retrieved)
         selected_reader_answer = select_best_reader_answer(ranked_answers, config.reader_min_span_score)
@@ -206,12 +273,20 @@ def evaluate_eval_set(
         rag_citations: set[str] = set()
         if mode == "rag":
             assert chatbot is not None
-            rag_prediction = chatbot.answer(question)
+            try:
+                rag_prediction = _run_with_alarm_timeout(
+                    lambda: chatbot.answer(question),
+                    timeout_sec=rag_answer_timeout_sec,
+                )
+            except _EvalTimeout:
+                rag_timeout_count += 1
+                rag_prediction = "I don't know."
             rag_body, _ = _split_answer_and_sources(rag_prediction)
             rag_citations = _extract_citations(rag_prediction)
-            if source_checkable and expected_sources:
+            citation_keys = _source_keys_from_labels(rag_citations)
+            if source_checkable and expected_source_keys:
                 citation_checked += 1
-                citation_hits += int(bool(rag_citations & expected_sources))
+                citation_hits += int(bool(citation_keys & expected_source_keys))
 
             rag_em += exact_match(rag_body, expected_answer)
             rag_f1 += token_f1(rag_body, expected_answer)
@@ -231,8 +306,10 @@ def evaluate_eval_set(
 
     summary: dict[str, Any] = {
         "samples": total,
+        "requested_samples": len(questions),
         "mode": mode,
         "top_k": runtime_top_k,
+        "truncated_by_runtime": total < len(questions),
         "retrieval_hit_rate": retrieval_hits / retrieval_checked if retrieval_checked else 0.0,
         "reader_exact_match": reader_em / total if total else 0.0,
         "reader_f1": reader_f1 / total if total else 0.0,
@@ -243,6 +320,7 @@ def evaluate_eval_set(
                 "rag_exact_match": rag_em / total if total else 0.0,
                 "rag_f1": rag_f1 / total if total else 0.0,
                 "citation_hit_rate": citation_hits / citation_checked if citation_checked else 0.0,
+                "rag_timeout_count": rag_timeout_count,
             }
         )
 
@@ -255,6 +333,18 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--mode", choices=["reader", "rag"], default="rag")
     parser.add_argument("--top-k", type=int, default=5)
     parser.add_argument("--limit", type=int, default=0)
+    parser.add_argument(
+        "--max-runtime-sec",
+        type=float,
+        default=0.0,
+        help="Stop evaluation once total runtime exceeds this many seconds (0 disables limit).",
+    )
+    parser.add_argument(
+        "--rag-answer-timeout-sec",
+        type=float,
+        default=0.0,
+        help="Per-question timeout for RAG generation step (0 disables timeout).",
+    )
     parser.add_argument("--output-json", type=str, default="")
     return parser.parse_args(argv)
 
@@ -280,6 +370,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         mode=args.mode,
         top_k=args.top_k,
         limit=args.limit,
+        max_runtime_sec=args.max_runtime_sec,
+        rag_answer_timeout_sec=args.rag_answer_timeout_sec,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
 

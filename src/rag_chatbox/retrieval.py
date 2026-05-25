@@ -265,6 +265,12 @@ def _preview(text: str, limit: int = 180) -> str:
     return flattened[: max(0, limit - 3)].rstrip() + "..."
 
 
+def _normalize_relevance_score(raw_score: float) -> tuple[float, bool]:
+    score = float(raw_score)
+    clamped = max(0.0, min(1.0, score))
+    return clamped, clamped != score
+
+
 def _normalize_cache_key(text: str) -> str:
     return " ".join((text or "").strip().casefold().split())
 
@@ -315,11 +321,28 @@ def _make_retrieval_fn(
                 queries = _dedupe_non_empty([question, *queries], limit=config.query_rewrite_max_variants + 1)
 
         merged: dict[tuple[str, str, str, str], tuple[Document, float]] = {}
+        merged_all: dict[tuple[str, str, str, str], tuple[Document, float]] = {}
         candidates_debug: list[dict[str, Any]] = []
+        relevance_clamp_count = 0
         for q in queries:
             candidates = vectorstore.similarity_search_with_relevance_scores(q, k=config.fetch_k)
-            for doc, rel_score in candidates:
+            for doc, raw_rel_score in candidates:
                 source, page = _doc_source_page(doc)
+                rel_score, rel_score_was_clamped = _normalize_relevance_score(raw_rel_score)
+                if rel_score_was_clamped:
+                    relevance_clamp_count += 1
+                overlap = _overlap_score(question, doc.page_content)
+                rerank_score = (0.8 * rel_score) + (0.2 * overlap)
+                doc.metadata["retrieval_relevance_score_raw"] = float(raw_rel_score)
+                doc.metadata["retrieval_relevance_score"] = float(rel_score)
+                doc.metadata["retrieval_overlap_score"] = float(overlap)
+                key = _doc_key(doc)
+
+                previous_any = merged_all.get(key)
+                if previous_any is None or rerank_score > previous_any[1]:
+                    doc.metadata["matched_query"] = q
+                    merged_all[key] = (doc, rerank_score)
+
                 if rel_score < config.score_threshold:
                     candidates_debug.append(
                         {
@@ -327,20 +350,17 @@ def _make_retrieval_fn(
                             "source": source,
                             "page": page,
                             "chunk_preview": _preview(doc.page_content, limit=120),
+                            "relevance_score_raw": float(raw_rel_score),
                             "relevance_score": float(rel_score),
-                            "overlap_score": 0.0,
-                            "rerank_score": 0.0,
+                            "overlap_score": float(overlap),
+                            "rerank_score": float(rerank_score),
                             "passed_threshold": False,
                             "selected": False,
                             "decision": "filtered_by_score_threshold",
                         }
                     )
                     continue
-                overlap = _overlap_score(question, doc.page_content)
-                rerank_score = (0.8 * rel_score) + (0.2 * overlap)
-                doc.metadata["retrieval_relevance_score"] = float(rel_score)
-                doc.metadata["retrieval_overlap_score"] = float(overlap)
-                key = _doc_key(doc)
+
                 previous = merged.get(key)
                 decision = "kept_for_rerank"
                 if previous is None or rerank_score > previous[1]:
@@ -357,6 +377,7 @@ def _make_retrieval_fn(
                         "source": source,
                         "page": page,
                         "chunk_preview": _preview(doc.page_content, limit=120),
+                        "relevance_score_raw": float(raw_rel_score),
                         "relevance_score": float(rel_score),
                         "overlap_score": float(overlap),
                         "rerank_score": float(rerank_score),
@@ -367,6 +388,65 @@ def _make_retrieval_fn(
                 )
 
         if not merged:
+            fallback_enabled = bool(getattr(config, "fallback_to_top_k_when_no_threshold_hit", False))
+            min_fallback_rel = float(getattr(config, "fallback_min_relevance_score", 0.0))
+            fallback_pool = [
+                (doc, score)
+                for doc, score in merged_all.values()
+                if float(doc.metadata.get("retrieval_relevance_score", 0.0)) >= min_fallback_rel
+            ]
+            if fallback_enabled and fallback_pool:
+                fallback_pool.sort(key=lambda x: x[1], reverse=True)
+                selected: list[Document] = []
+                selected_debug: list[dict[str, Any]] = []
+                for doc, score in fallback_pool[: config.top_k]:
+                    doc.metadata["rerank_score"] = float(score)
+                    selected.append(doc)
+                    source, page = _doc_source_page(doc)
+                    selected_debug.append(
+                        {
+                            "source": source,
+                            "page": page,
+                            "matched_query": str(doc.metadata.get("matched_query", "")),
+                            "chunk_preview": _preview(doc.page_content, limit=180),
+                            "relevance_score": float(doc.metadata.get("retrieval_relevance_score", 0.0)),
+                            "overlap_score": float(doc.metadata.get("retrieval_overlap_score", 0.0)),
+                            "rerank_score": float(score),
+                        }
+                    )
+
+                for item in candidates_debug:
+                    for selected_item in selected_debug:
+                        if (
+                            item["source"] == selected_item["source"]
+                            and item["page"] == selected_item["page"]
+                            and item["query"] == selected_item["matched_query"]
+                        ):
+                            item["selected"] = True
+                            break
+
+                retrieve.last_trace = {
+                    "question": question,
+                    "queries_used": queries,
+                    "rewritten_queries": rewritten_queries,
+                    "score_threshold": float(config.score_threshold),
+                    "fetch_k": int(config.fetch_k),
+                    "top_k": int(config.top_k),
+                    "candidates": candidates_debug,
+                    "selected": selected_debug,
+                    "decision": "fallback_selected_top_k_below_threshold",
+                    "fallback_to_top_k_when_no_threshold_hit": True,
+                    "fallback_min_relevance_score": min_fallback_rel,
+                    "query_rewrite_cache_hit": query_rewrite_cache_hit,
+                    "retrieval_cache_hit": False,
+                    "relevance_score_clamped_count": relevance_clamp_count,
+                }
+                if cache_key:
+                    retrieval_cache.set(cache_key, (_clone_docs(selected), dict(retrieve.last_trace)))
+                    query_rewrite_cache.cleanup()
+                    retrieval_cache.cleanup()
+                return selected
+
             retrieve.last_trace = {
                 "question": question,
                 "queries_used": queries,
@@ -377,8 +457,11 @@ def _make_retrieval_fn(
                 "candidates": candidates_debug,
                 "selected": [],
                 "decision": "no_chunks_after_threshold_filter",
+                "fallback_to_top_k_when_no_threshold_hit": fallback_enabled,
+                "fallback_min_relevance_score": min_fallback_rel,
                 "query_rewrite_cache_hit": query_rewrite_cache_hit,
                 "retrieval_cache_hit": False,
+                "relevance_score_clamped_count": relevance_clamp_count,
             }
             logger.info(
                 "No retrieved chunks cleared score threshold for question=%r",
@@ -428,6 +511,7 @@ def _make_retrieval_fn(
             "decision": "selected_top_k_by_rerank",
             "query_rewrite_cache_hit": query_rewrite_cache_hit,
             "retrieval_cache_hit": False,
+            "relevance_score_clamped_count": relevance_clamp_count,
         }
         if cache_key:
             retrieval_cache.set(cache_key, (_clone_docs(selected), dict(retrieve.last_trace)))

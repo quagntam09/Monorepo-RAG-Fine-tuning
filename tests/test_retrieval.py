@@ -26,11 +26,32 @@ class TestRetrievalThreshold(unittest.TestCase):
         doc = Document(page_content="irrelevant", metadata={"source": "demo.pdf", "page": 0})
         retriever = _make_retrieval_fn(
             FakeVectorstore([(doc, 0.1)]),
-            AppConfig(score_threshold=0.5, top_k=5, fetch_k=5),
+            AppConfig(
+                score_threshold=0.5,
+                top_k=5,
+                fetch_k=5,
+                fallback_to_top_k_when_no_threshold_hit=False,
+            ),
         )
 
         results = retriever("question")
         self.assertEqual(results, [])
+
+    def test_fallback_selects_top_k_when_all_below_threshold(self):
+        doc = Document(page_content="still useful context", metadata={"source": "demo.pdf", "page": 0})
+        retriever = _make_retrieval_fn(
+            FakeVectorstore([(doc, 0.2)]),
+            AppConfig(
+                score_threshold=0.5,
+                top_k=5,
+                fetch_k=5,
+                fallback_to_top_k_when_no_threshold_hit=True,
+            ),
+        )
+
+        results = retriever("question")
+        self.assertEqual(len(results), 1)
+        self.assertEqual(retriever.last_trace["decision"], "fallback_selected_top_k_below_threshold")
 
     def test_returns_docs_above_threshold(self):
         doc = Document(page_content="relevant", metadata={"source": "demo.pdf", "page": 0})

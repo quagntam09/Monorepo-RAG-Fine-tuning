@@ -8,7 +8,7 @@ from typing import Sequence
 
 from .config import TrainingConfig
 from .evaluate import evaluate_checkpoint
-from .export import export_reader_artifact
+from .export import export_reader_artifact, infer_metric_from_checkpoint
 from .trainer import train
 
 
@@ -96,6 +96,12 @@ def train_main(argv: Sequence[str] | None = None) -> None:
     args = _train_parser().parse_args(argv)
     config = _apply_overrides(_load_config(args.config), args)
     result = train(config)
+    output_dir = Path(config.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "training_result.json").write_text(
+        json.dumps(result, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
     print(json.dumps(result, indent=2, ensure_ascii=False))
 
 
@@ -118,6 +124,9 @@ def export_main(argv: Sequence[str] | None = None) -> None:
     max_length = args.max_length or config.max_length
     artifact_name = args.artifact_name or config.artifact_name
     metric_name = args.metric_name or config.best_metric
+    metric_value = args.metric_value
+    if metric_value is None:
+        metric_value = infer_metric_from_checkpoint(checkpoint_dir=checkpoint_dir, metric_name=metric_name)
     opset_version = args.opset_version or config.onnx_opset_version
     artifact_path = export_reader_artifact(
         checkpoint_dir=checkpoint_dir,
@@ -128,6 +137,6 @@ def export_main(argv: Sequence[str] | None = None) -> None:
         opset_version=opset_version,
         artifact_name=artifact_name,
         metric_name=metric_name,
-        metric_value=args.metric_value,
+        metric_value=metric_value,
     )
     print(json.dumps({"artifact_dir": str(artifact_path)}, indent=2, ensure_ascii=False))

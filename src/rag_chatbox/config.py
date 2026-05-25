@@ -17,6 +17,8 @@ class AppConfig:
     top_k: int = 5
     fetch_k: int = 20
     score_threshold: float = 0.35
+    fallback_to_top_k_when_no_threshold_hit: bool = True
+    fallback_min_relevance_score: float = 0.0
     query_rewrite_enabled: bool = False
     query_rewrite_model: str = "qwen2.5:0.5b"
     query_rewrite_temperature: float = 0.0
@@ -109,6 +111,7 @@ def load_config() -> AppConfig:
         raise ValueError("RAG_QUERY_REWRITE_CACHE_MAX_SIZE must be > 0")
     if retrieval_cache_max_size <= 0:
         raise ValueError("RAG_RETRIEVAL_CACHE_MAX_SIZE must be > 0")
+    fallback_min_relevance_score = _env_float("RAG_FALLBACK_MIN_RELEVANCE_SCORE", 0.0)
 
     return AppConfig(
         data_dir=os.getenv("RAG_DATA_DIR", "./paper"),
@@ -122,6 +125,8 @@ def load_config() -> AppConfig:
         top_k=top_k,
         fetch_k=fetch_k,
         score_threshold=_env_float("RAG_SCORE_THRESHOLD", 0.35),
+        fallback_to_top_k_when_no_threshold_hit=_env_bool("RAG_FALLBACK_TO_TOP_K_WHEN_NO_THRESHOLD_HIT", True),
+        fallback_min_relevance_score=fallback_min_relevance_score,
         query_rewrite_enabled=_env_bool("RAG_QUERY_REWRITE_ENABLED", False),
         query_rewrite_model=os.getenv("RAG_QUERY_REWRITE_MODEL", os.getenv("RAG_LLM_MODEL", "qwen2.5:0.5b")),
         query_rewrite_temperature=_env_float("RAG_QUERY_REWRITE_TEMPERATURE", 0.0),

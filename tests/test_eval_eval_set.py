@@ -104,6 +104,43 @@ class TestEvaluateEvalSet(unittest.TestCase):
         self.assertEqual(captured["fetch_k"], 7)
         self.assertEqual(result["summary"]["top_k"], 7)
 
+    def test_source_matching_uses_basename_and_page(self):
+        docs = [Document(page_content="Hà Nội là thủ đô của Việt Nam.", metadata={"source": "paper/demo.pdf", "page": 0})]
+
+        class PathCitationChatbot:
+            def answer(self, question: str) -> str:
+                return "Hà Nội\n\nNguồn:\n- paper/demo.pdf (Page 1)"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            eval_file = Path(tmpdir) / "questions.jsonl"
+            eval_file.write_text(
+                json.dumps(
+                    {
+                        "id": "q1",
+                        "question": "Thủ đô của Việt Nam là gì?",
+                        "expected_answer": "Hà Nội",
+                        "expected_sources": [{"source": "demo.pdf", "page": 1}],
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            with patch(
+                "rag_chatbox.evaluate_eval_set._build_components",
+                return_value=(lambda _q: docs, FakeReader(), PathCitationChatbot()),
+            ):
+                result = evaluate_eval_set(
+                    config=AppConfig(reader_min_span_score=0.0),
+                    eval_file=eval_file,
+                    mode="rag",
+                    top_k=5,
+                )
+
+        self.assertEqual(result["summary"]["retrieval_hit_rate"], 1.0)
+        self.assertEqual(result["summary"]["citation_hit_rate"], 1.0)
+
 
 if __name__ == "__main__":
     unittest.main()

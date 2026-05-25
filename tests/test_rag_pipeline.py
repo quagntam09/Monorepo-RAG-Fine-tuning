@@ -83,7 +83,16 @@ class TestPrepareChainPayload(unittest.TestCase):
         )
 
         self.assertIn("Nguồn:", final)
-        self.assertEqual(final, "candidate\n\nNguồn:\n- Không có trích dẫn hợp lệ trong context.")
+        self.assertEqual(final, "candidate\n\nNguồn:\n- demo.pdf (Page 1)")
+
+    def test_finalize_answer_accepts_basename_page_match(self):
+        final = _finalize_answer(
+            answer="candidate\n\nNguồn:\n- [Reading]-RAG-System.pdf (Page 5)",
+            allowed_sources=[{"source": "paper/[Reading]-RAG-System.pdf", "page": 5, "label": "paper/[Reading]-RAG-System.pdf (Page 5)"}],
+        )
+
+        self.assertIn("Nguồn:", final)
+        self.assertIn("paper/[Reading]-RAG-System.pdf (Page 5)", final)
 
     def test_chatbot_skips_llm_when_no_context(self):
         config = AppConfig(reader_min_span_score=0.0)
