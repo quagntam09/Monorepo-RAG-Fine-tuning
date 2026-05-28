@@ -56,12 +56,13 @@ Dự án được tổ chức dưới dạng Monorepo Python chia tách rõ ràn
 Mục tiêu là huấn luyện một mô hình QA trích xuất (Extractive QA) cho tiếng Việt dựa trên kiến trúc DistilBERT đa ngôn ngữ.
 
 - **`config.py`**: Khai báo Dataclass `TrainingConfig` đọc/ghi cấu hình từ YAML (`config/defaults.yaml`).
-- **`data_loader.py` & `dataset.py`**: 
-  - Tải dữ liệu từ Hugging Face (mặc định: `taidng/UIT-ViQuAD2.0` cho tiếng Việt) hoặc tệp JSONL cục bộ.
+- **`data_loader.py` & `dataset.py`**:
+  - Tải dữ liệu từ Hugging Face hoặc tệp JSONL cục bộ.
+  - Hỗ trợ workflow 2-stage EN+VI thông qua script chuẩn hóa dữ liệu `scripts/prepare_multilingual_qa.py`.
   - Tiền xử lý dữ liệu: tokenize văn bản, xác định ranh giới token bắt đầu/kết thúc (align answer span) dựa trên vị trí ký tự của đáp án trong ngữ cảnh. Xử lý trường hợp câu hỏi không thể trả lời được (impossible questions).
 - **`vietnamese_utils.py`**: Cung cấp các tiện ích xử lý tiếng Việt, hỗ trợ tách từ (word segmentation) thông qua thư viện `underthesea` hoặc `pyvi` để cải thiện độ chính xác cho mô hình BERT.
 - **`modeling.py` & `qa_head.py`**: Bọc mô hình DistilBERT phục vụ bài toán QA. Lớp QA Head nhận vào các biểu diễn ẩn (hidden states) từ BERT và chiếu xuống không gian 2 chiều để dự đoán phân phối xác suất của token Bắt đầu (Start) và Kết thúc (End) của câu trả lời.
-- **`trainer.py` & `evaluate.py`**: Vòng lặp huấn luyện chuẩn PyTorch hỗ trợ Mixed Precision (AMP), lưu checkpoint dựa trên chỉ số F1 tốt nhất trên tập Validation.
+- **`trainer.py` & `evaluate.py`**: Vòng lặp huấn luyện chuẩn PyTorch hỗ trợ Mixed Precision (AMP), lưu checkpoint dựa trên chỉ số F1 tốt nhất trên tập Validation. Hỗ trợ nạp trọng số khởi tạo qua `init_checkpoint_dir` để Stage 2 fine-tune tiếp từ Stage 1.
 - **`export.py`**: Xuất mô hình PyTorch đã huấn luyện sang định dạng **ONNX** để tối ưu hóa suy luận CPU, thực hiện lượng hóa (quantization) sang dạng INT8 (`model_quantized.onnx`) giúp giảm dung lượng mô hình xuống ~4 lần và tăng tốc độ xử lý mà không làm giảm đáng kể độ chính xác.
 
 ### B. Phân Hệ Phục Vụ RAG (Serving Pipeline) - `src/rag_chatbox/`
@@ -96,7 +97,13 @@ Tập hợp các module cốt lõi để vận hành chatbot thông minh.
 ```text
 Monorepo-RAG-Fine-tuning/
 ├── config/
-│   └── defaults.yaml             # Cấu hình huấn luyện mặc định cho DistilBERT
+│   ├── defaults.yaml             # Cấu hình huấn luyện mặc định cho DistilBERT
+│   ├── stage1_mixed_en_vi.yaml   # Cấu hình Stage 1 mixed EN+VI
+│   ├── stage2_vi_refine.yaml     # Cấu hình Stage 2 refine trên VI
+│   ├── eval_en.yaml              # Cấu hình benchmark tiếng Anh
+│   └── eval_vi.yaml              # Cấu hình benchmark tiếng Việt
+├── data/
+│   └── qa_multilingual/          # Dữ liệu JSONL cho Stage 1/Stage 2/eval EN-VI
 ├── docs/
 │   └── PROJECT_GUIDE.md          # Tài liệu hướng dẫn kỹ thuật chi tiết (Tệp này)
 ├── eval/                         # Phân hệ đánh giá hiệu năng
@@ -123,7 +130,9 @@ Monorepo-RAG-Fine-tuning/
 │       ├── rag_pipeline.py       # Pipeline RAG + Khử lặp văn bản
 │       ├── reader_distilbert.py  # Quản lý ONNX Runtime và trích xuất span
 │       └── retrieval.py          # Tìm kiếm FAISS + Reranking + Overlap Score
-├── tests/                        # Hệ thống Unit Tests (31 tests) bao phủ 100% logic cốt lõi
+├── scripts/
+│   └── prepare_multilingual_qa.py # Script chuẩn hóa + trộn dữ liệu QA EN/VI
+├── tests/                        # Hệ thống Unit Tests
 ├── .env.example                  # File cấu hình biến môi trường mẫu cục bộ
 ├── pyproject.toml                # Khai báo dependencies và CLI entrypoints
 └── REVIEWS.md                    # Nhật ký review dự án gốc
@@ -198,6 +207,40 @@ Mở hai cửa sổ terminal riêng biệt và kích hoạt môi trường ảo:
   rag-synthesis-service
   ```
   *(Hoặc: `python3 -m rag_chatbox.services.synthesis_service`)*
+
+### B. Huấn Luyện 2-Stage EN+VI -> VI
+
+#### 1. Chuẩn bị dữ liệu JSONL chuẩn hóa:
+```bash
+python scripts/prepare_multilingual_qa.py \
+  --output-dir data/qa_multilingual \
+  --stage1-vi-ratio 0.5
+```
+
+#### 2. Stage 1 - Mixed EN+VI:
+```bash
+rag-ft-train --config config/stage1_mixed_en_vi.yaml
+```
+
+#### 3. Đánh giá Stage 1 theo từng ngôn ngữ:
+```bash
+rag-ft-eval --config config/eval_en.yaml --checkpoint-dir outputs/checkpoints_stage1_mixed/best_model
+rag-ft-eval --config config/eval_vi.yaml --checkpoint-dir outputs/checkpoints_stage1_mixed/best_model
+```
+
+#### 4. Stage 2 - Refine trên tiếng Việt:
+```bash
+rag-ft-train --config config/stage2_vi_refine.yaml
+rag-ft-eval --config config/eval_vi.yaml --checkpoint-dir outputs/checkpoints_stage2_vi/best_model
+```
+
+#### 5. Export artifact final:
+```bash
+rag-ft-export \
+  --config config/stage2_vi_refine.yaml \
+  --checkpoint-dir outputs/checkpoints_stage2_vi/best_model \
+  --artifact-dir artifacts/readers/run_best
+```
 
 ## 6. Phân Hệ Đánh Giá & Các Tối Ưu Hóa Hiệu Năng (Evaluation & Optimizations)
 

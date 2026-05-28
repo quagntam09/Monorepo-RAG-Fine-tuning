@@ -126,25 +126,51 @@ curl -X POST http://localhost:8080/v1/chat/ask \
 
 ---
 
-## 🏋️ 5. Huấn Luyện Tinh Chỉnh Mô Hình Reader
+## 🏋️ 5. Huấn Luyện Reader 2 Giai Đoạn (EN+VI -> VI)
 
-Toàn bộ cấu hình huấn luyện nằm tại tệp `config/defaults.yaml`.
+Pipeline fine-tuning khuyến nghị:
+- **Stage 1**: Train mixed EN+VI để học span QA tổng quát.
+- **Stage 2**: Fine-tune tiếp trên VI để tối ưu điểm tiếng Việt.
 
-### Huấn luyện (Train):
+### A. Chuẩn bị dữ liệu local JSONL
 ```bash
-rag-ft-train --config config/defaults.yaml
+python scripts/prepare_multilingual_qa.py \
+  --output-dir data/qa_multilingual \
+  --stage1-vi-ratio 0.5 \
+  --stage1-validation-size 4000
 ```
 
-### Đánh giá Checkpoint:
+Script tạo các file:
+- `data/qa_multilingual/stage1_train.jsonl`
+- `data/qa_multilingual/stage1_validation.jsonl`
+- `data/qa_multilingual/stage2_vi_train.jsonl`
+- `data/qa_multilingual/stage2_vi_validation.jsonl`
+- `data/qa_multilingual/eval_en_validation.jsonl`
+- `data/qa_multilingual/eval_vi_validation.jsonl`
+
+### B. Stage 1 - Mixed EN+VI
 ```bash
-rag-ft-eval --config config/defaults.yaml --checkpoint-dir outputs/checkpoints/best_model
+rag-ft-train --config config/stage1_mixed_en_vi.yaml
 ```
 
-### Xuất mô hình sang ONNX lượng hóa:
+Đánh giá checkpoint Stage 1 trên EN và VI:
+```bash
+rag-ft-eval --config config/eval_en.yaml --checkpoint-dir outputs/checkpoints_stage1_mixed/best_model
+rag-ft-eval --config config/eval_vi.yaml --checkpoint-dir outputs/checkpoints_stage1_mixed/best_model
+```
+
+### C. Stage 2 - Refine trên VI
+`config/stage2_vi_refine.yaml` đã cấu hình `init_checkpoint_dir=outputs/checkpoints_stage1_mixed/best_model`.
+```bash
+rag-ft-train --config config/stage2_vi_refine.yaml
+rag-ft-eval --config config/eval_vi.yaml --checkpoint-dir outputs/checkpoints_stage2_vi/best_model
+```
+
+### D. Export mô hình final sang ONNX lượng hóa
 ```bash
 rag-ft-export \
-  --config config/defaults.yaml \
-  --checkpoint-dir outputs/checkpoints/best_model \
+  --config config/stage2_vi_refine.yaml \
+  --checkpoint-dir outputs/checkpoints_stage2_vi/best_model \
   --artifact-dir artifacts/readers/run_best
 ```
 
@@ -173,9 +199,10 @@ python -m unittest discover -s tests -p 'test_*.py'
 
 ```text
 config/      # Cấu hình huấn luyện và export mô hình
+data/        # Dữ liệu QA local đã chuẩn hóa (stage1/stage2/eval)
 docs/        # Tài liệu hướng dẫn kỹ thuật chi tiết của hệ thống
 eval/        # Tập dữ liệu kiểm thử vàng và lịch sử kết quả đánh giá
-scripts/     # Các script đồng bộ/tải nhanh artifacts từ Object Storage
+scripts/     # Script chuẩn bị dữ liệu QA và đồng bộ artifacts
 src/         # Mã nguồn chính (training/ và rag_chatbox/)
 tests/       # Hệ thống kiểm thử tự động (Unit Tests)
 paper/       # PDF tài liệu đầu vào (Local - không commit git)

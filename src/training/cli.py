@@ -41,6 +41,7 @@ def _train_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Fine-tune DistilBERT for extractive QA")
     parser.add_argument("--config", default="config/defaults.yaml")
     parser.add_argument("--model_name", type=str)
+    parser.add_argument("--init_checkpoint_dir", type=str)
     parser.add_argument("--epochs", type=int)
     parser.add_argument("--batch_size", type=int)
     parser.add_argument("--learning_rate", type=float)

@@ -75,6 +75,39 @@ def _is_better_metric(
     return current_value > best_value if greater_is_better else current_value < best_value
 
 
+def _safe_load_state_dict(path: Path) -> dict:
+    try:
+        return torch.load(path, map_location="cpu", weights_only=True)
+    except TypeError:
+        return torch.load(path, map_location="cpu")
+
+
+def _resolve_tokenizer_source(config: TrainingConfig) -> str:
+    if not config.init_checkpoint_dir:
+        return config.model_name
+    checkpoint_dir = Path(config.init_checkpoint_dir)
+    required = ("tokenizer.json", "tokenizer_config.json")
+    if all((checkpoint_dir / name).exists() for name in required):
+        return str(checkpoint_dir)
+    return config.model_name
+
+
+def _load_initial_checkpoint_if_configured(model, config: TrainingConfig) -> str | None:
+    if not config.init_checkpoint_dir:
+        return None
+
+    checkpoint_dir = Path(config.init_checkpoint_dir)
+    checkpoint_file = checkpoint_dir / "pytorch_model.bin"
+    if not checkpoint_file.exists():
+        raise FileNotFoundError(
+            f"init_checkpoint_dir được cấu hình nhưng thiếu file trọng số: {checkpoint_file}"
+        )
+
+    state_dict = _safe_load_state_dict(checkpoint_file)
+    model.load_state_dict(state_dict, strict=True)
+    return str(checkpoint_dir)
+
+
 def _build_validation_eval_inputs(
     raw_validation_dataset,
     tokenizer,
@@ -111,13 +144,9 @@ def _build_validation_eval_inputs(
         except Exception as e:
             logger.warning("Không khởi tạo được VietnameseTextProcessor cho validation metrics: %s", e)
 
-    # sample_id do prepare_eval_features trả về map về index mẫu gốc.
-    sample_ids = eval_features["sample_id"]
-    contexts = []
-
-    # predictions sẽ tính theo feature-level (do overflow), nên references cũng ở feature-level.
+    metric_contexts_by_sample: dict[int, str] = {}
     references = []
-    for feature_idx, sample_idx in enumerate(sample_ids):
+    for sample_idx in range(len(raw_validation_dataset)):
         raw_sample = raw_validation_dataset[int(sample_idx)]
         raw_context = raw_sample[config.context_column]
         answers = raw_sample.get(config.answers_column, {"text": [], "answer_start": []})
@@ -132,20 +161,23 @@ def _build_validation_eval_inputs(
             segmented_context = vi_processor.segment(raw_context)
             metric_context = segmented_context
 
-            if len(answer_texts) > 0 and len(answer_starts) > 0:
+            aligned_texts: list[str] = []
+            aligned_starts: list[int] = []
+            for answer_text, answer_start in zip(answer_texts, answer_starts):
                 aligned_start, aligned_text = align_segmentation_offset(
                     raw_context=raw_context,
-                    raw_answer_text=answer_texts[0],
-                    raw_answer_start=answer_starts[0],
+                    raw_answer_text=answer_text,
+                    raw_answer_start=answer_start,
                     segmented_context=segmented_context,
                 )
                 if aligned_start is not None and aligned_text is not None:
-                    metric_answer_texts = list(answer_texts)
-                    metric_answer_starts = list(answer_starts)
-                    metric_answer_texts[0] = aligned_text
-                    metric_answer_starts[0] = aligned_start
+                    aligned_texts.append(aligned_text)
+                    aligned_starts.append(aligned_start)
+            if aligned_texts:
+                metric_answer_texts = aligned_texts
+                metric_answer_starts = aligned_starts
 
-        contexts.append(metric_context)
+        metric_contexts_by_sample[int(sample_idx)] = metric_context
         # evaluate.squad yêu cầu mỗi sample có ít nhất 1 ground-truth answer text.
         # Với unanswerable samples, dùng empty-string answer để tránh crash max([]).
         if len(metric_answer_texts) == 0:
@@ -153,7 +185,7 @@ def _build_validation_eval_inputs(
             metric_answer_starts = [0]
         references.append(
             {
-                "id": str(feature_idx),
+                "id": str(sample_idx),
                 "answers": {
                     "text": metric_answer_texts,
                     "answer_start": metric_answer_starts,
@@ -161,12 +193,15 @@ def _build_validation_eval_inputs(
             }
         )
 
+    # sample_id do prepare_eval_features trả về map mỗi feature/window về mẫu gốc.
+    feature_sample_ids = [int(sample_idx) for sample_idx in eval_features["sample_id"]]
+
     return {
         "input_ids": eval_features["input_ids"],
         "attention_mask": eval_features["attention_mask"],
         "offset_mapping": eval_features["offset_mapping"],
-        "contexts": contexts,
-        "example_ids": [str(i) for i in range(len(sample_ids))],
+        "contexts": [metric_contexts_by_sample[sample_idx] for sample_idx in feature_sample_ids],
+        "example_ids": [str(sample_idx) for sample_idx in feature_sample_ids],
         "references": references,
     }
 
@@ -221,7 +256,7 @@ def _run_em_f1_validation(
     return compute_metrics(eval_preds)
 
 
-def train(config: TrainingConfig) -> None:
+def train(config: TrainingConfig) -> dict[str, float | str]:
     """
     Main training loop.
 
@@ -269,7 +304,8 @@ def train(config: TrainingConfig) -> None:
 
     # ── Data ────────────────────────────────────────────────────────────────
     logger.info("Loading datasets...")
-    tokenizer = AutoTokenizer.from_pretrained(config.model_name)
+    tokenizer_source = _resolve_tokenizer_source(config)
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_source)
     datasets = build_qa_datasets(tokenizer=tokenizer, config=config)
 
     train_dataset = datasets.get("train")
@@ -317,6 +353,9 @@ def train(config: TrainingConfig) -> None:
         dropout=config.dropout,
         freeze_encoder=config.freeze_encoder,
     )
+    init_checkpoint_used = _load_initial_checkpoint_if_configured(model=model, config=config)
+    if init_checkpoint_used is not None:
+        logger.info("Initialized model weights from checkpoint: %s", init_checkpoint_used)
     model.to(device)
 
     total_params = sum(p.numel() for p in model.parameters())
@@ -474,7 +513,7 @@ def train(config: TrainingConfig) -> None:
     if config.load_best_model and best_path.exists():
         checkpoint_file = best_path / "pytorch_model.bin"
         if checkpoint_file.exists():
-            model.load_state_dict(torch.load(checkpoint_file, map_location=device))
+            model.load_state_dict(_safe_load_state_dict(checkpoint_file))
             logger.info("Best model loaded at end from %s", best_path)
 
     logger.info("\nTraining completed!")
@@ -483,4 +522,5 @@ def train(config: TrainingConfig) -> None:
         "best_metric_name": metric_for_best_model,
         "best_metric_value": float(best_metric_value),
         "output_dir": str(output_dir),
+        "init_checkpoint_dir": init_checkpoint_used,
     }

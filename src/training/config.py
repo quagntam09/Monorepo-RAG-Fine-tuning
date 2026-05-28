@@ -13,6 +13,7 @@ class TrainingConfig:
 
     # ── Model Architecture ────────────────────────────────────────────────────
     model_name: str = "distilbert-base-multilingual-cased"
+    init_checkpoint_dir: Optional[str] = None  # Load trọng số khởi tạo trước khi train (Stage 2)
     dropout: float = 0.1
     freeze_encoder: bool = False  # True = chỉ train QA head
 

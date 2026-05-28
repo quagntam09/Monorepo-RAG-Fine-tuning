@@ -198,13 +198,13 @@ def compute_metrics(eval_preds) -> dict:
     if n_samples == 0:
         return {"exact_match": 0.0, "f1": 0.0}
 
-    predictions: list[dict] = []
+    best_predictions_by_example: dict[str, tuple[float, str]] = {}
     n_best_size = 20
     for idx in range(n_samples):
         offsets = offset_mappings[idx]
         context = contexts[idx]
+        example_id = str(example_ids[idx])
 
-        pred_text = ""
         if not isinstance(offsets, list):
             offsets = list(offsets)
 
@@ -243,20 +243,19 @@ def compute_metrics(eval_preds) -> dict:
                     best_score = cand_score
                     best_text = cand_text
 
-        pred_text = best_text
+        previous = best_predictions_by_example.get(example_id)
+        if previous is None or best_score > previous[0]:
+            best_predictions_by_example[example_id] = (best_score, best_text)
 
-        predictions.append({"id": str(example_ids[idx]), "prediction_text": pred_text})
-
-    # Chỉ giữ references tương ứng prediction ids đang có (tránh mismatch do overflow/window).
-    pred_ids = {p["id"] for p in predictions}
-    filtered_references = [r for r in references if str(r.get("id")) in pred_ids]
-
-    if len(filtered_references) == 0:
-        return {"exact_match": 0.0, "f1": 0.0}
-
-    # Defensive sanitize: metric SQuAD cần answers.text không rỗng cho từng reference.
+    predictions: list[dict] = []
     sanitized_references = []
-    for ref in filtered_references:
+    for ref in references:
+        if not isinstance(ref, dict):
+            continue
+        ref_id = str(ref.get("id"))
+        _, pred_text = best_predictions_by_example.get(ref_id, (float("-inf"), ""))
+        predictions.append({"id": ref_id, "prediction_text": pred_text})
+
         answers = ref.get("answers", {}) if isinstance(ref, dict) else {}
         texts = list(answers.get("text", [])) if isinstance(answers, dict) else []
         starts = list(answers.get("answer_start", [])) if isinstance(answers, dict) else []
@@ -269,10 +268,13 @@ def compute_metrics(eval_preds) -> dict:
 
         sanitized_references.append(
             {
-                "id": str(ref.get("id")),
+                "id": ref_id,
                 "answers": {"text": texts, "answer_start": starts},
             }
         )
+
+    if len(sanitized_references) == 0:
+        return {"exact_match": 0.0, "f1": 0.0}
 
     squad_metric = _load_squad_metric()
     metric_result = squad_metric.compute(
