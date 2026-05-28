@@ -169,30 +169,10 @@ python -m unittest discover -s tests -p 'test_*.py'
 
 ---
 
-## 🐳 7. Triển Khai Bằng Docker Compose
-
-Xem tài liệu chi tiết tại [deploy/README.md](file:///deploy/README.md).
-
-Quy trình khởi động nhanh gọn qua Docker:
-```bash
-# 1. Chuẩn bị biến môi trường deploy
-cp .env.deploy.example .env.deploy
-
-# 2. Build index offline trên máy host
-python3 -m rag_chatbox.services.indexer_job --print-summary
-
-# 3. Khởi chạy cụm Microservices (Reader + Synthesis)
-docker compose -f deploy/docker-compose.yml up --build
-```
-*(Các dịch vụ Docker sử dụng chế độ mạng `host` để kết nối trực tiếp với dịch vụ Ollama đang lắng nghe trên máy Host).*
-
----
-
-## 📁 8. Sơ Đồ Cấu Trúc Dự Án
+## 📁 7. Sơ Đồ Cấu Trúc Dự Án
 
 ```text
 config/      # Cấu hình huấn luyện và export mô hình
-deploy/      # Dockerfiles, Docker Compose và hướng dẫn deploy
 docs/        # Tài liệu hướng dẫn kỹ thuật chi tiết của hệ thống
 eval/        # Tập dữ liệu kiểm thử vàng và lịch sử kết quả đánh giá
 scripts/     # Các script đồng bộ/tải nhanh artifacts từ Object Storage
@@ -204,9 +184,7 @@ outputs/     # Checkpoint huấn luyện PyTorch (Local - không commit git)
 .cache/      # Cơ sở dữ liệu FAISS cục bộ (Local - không commit git)
 ```
 
----
-
-## 🔄 9. Đồng Bộ Hóa Artifacts
+## 🔄 8. Đồng Bộ Hóa Artifacts
 
 Khi triển khai trên máy chủ mới chưa có dữ liệu và mô hình huấn luyện, hãy sử dụng script đồng bộ từ S3/Object Storage (nếu được cấu hình):
 
@@ -220,7 +198,3 @@ scripts/sync_artifacts.sh
 ```
 
 ---
-
-> [!CAUTION]
-> **Quy định quan trọng dành cho các AI Assistant / Nhà phát triển**:
-> Tuyệt đối **không thực hiện Git Commit** trực tiếp trên môi trường làm việc khi chưa có sự xác nhận của quản trị viên hệ thống. Mọi thay đổi mã nguồn phải được lưu giữ ở dạng working tree chưa commit.

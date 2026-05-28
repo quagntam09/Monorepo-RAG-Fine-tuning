@@ -6,7 +6,6 @@ import hashlib
 import json
 import logging
 import shutil
-import subprocess
 from pathlib import Path
 from typing import Sequence
 
@@ -51,15 +50,6 @@ def _safe_load_state_dict(checkpoint_dir: Path) -> dict:
         return torch.load(checkpoint_path, map_location="cpu", weights_only=True)
     except TypeError:
         return torch.load(checkpoint_path, map_location="cpu")
-
-
-def _resolve_git_commit(root_dir: Path) -> str | None:
-    try:
-        output = subprocess.check_output(["git", "-C", str(root_dir), "rev-parse", "HEAD"], text=True)
-        commit = output.strip()
-        return commit or None
-    except Exception:
-        return None
 
 
 def _read_json(path: Path) -> dict | None:
@@ -117,7 +107,6 @@ def export_reader_artifact(
     artifact_name: str = "run_best",
     metric_name: str | None = None,
     metric_value: float | None = None,
-    root_dir: str | Path | None = None,
 ) -> Path:
     checkpoint_dir = Path(checkpoint_dir)
     artifact_dir = Path(artifact_dir)
@@ -167,12 +156,10 @@ def export_reader_artifact(
     tokenizer = AutoTokenizer.from_pretrained(_tokenizer_source(checkpoint_dir, model_name_or_path))
     tokenizer.save_pretrained(artifact_dir)
 
-    source_root = Path(root_dir) if root_dir is not None else Path(__file__).resolve().parents[2]
     metadata = {
         "artifact_name": artifact_name,
         "artifact_type": "distilbert_onnx_reader",
         "export_time_utc": dt.datetime.now(dt.UTC).isoformat(),
-        "git_commit": _resolve_git_commit(source_root),
         "source_checkpoint_dir": str(checkpoint_dir),
         "model_name": model_name_or_path,
         "metric": {

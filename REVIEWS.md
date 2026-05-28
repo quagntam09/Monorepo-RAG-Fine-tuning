@@ -40,7 +40,6 @@ Question -> retriever -> chunks -> ONNX reader -> LLM synthesis -> answer + Nguo
 - `src/rag_chatbox/`: ingestion, retrieval, RAG pipeline, CLI, eval va services.
 - `src/rag_chatbox/services/`: indexer job, reader service, synthesis service.
 - `config/defaults.yaml`: cau hinh training/export mac dinh.
-- `deploy/`: Dockerfile, docker-compose va huong dan deploy.
 - `scripts/`: sync/fetch artifacts tu S3/object storage.
 - `eval/`: eval set va ket qua eval.
 - `tests/`: unit tests.
@@ -164,23 +163,6 @@ Synthesis service: `src/rag_chatbox/services/synthesis_service.py`
 - Goi Ollama LLM de tong hop cau tra loi.
 - Tra ve `answer`, `retrieval_sources` va `debug`.
 
-## 10. Docker va deploy
-
-`deploy/docker-compose.yml` hien khai bao:
-
-- `indexer`: profile `jobs`, mount `paper/`, `.cache/`, `outputs/`.
-- `reader`: mount `artifacts/`, dung host network, port mac dinh `8081`.
-- `synthesis`: mount `paper/`, `.cache/`, dung host network, port mac dinh `8080`.
-
-Dockerfiles dung `python:3.12-slim`, install `requirements.txt` va package editable.
-
-Lenh chinh:
-
-```bash
-docker compose -f deploy/docker-compose.yml --profile jobs run --rm indexer
-docker compose -f deploy/docker-compose.yml up --build reader synthesis
-```
-
 ## 11. Evaluation hien co
 
 Eval set:
@@ -276,7 +258,6 @@ Lan cap nhat review nay chi sua tai lieu, chua chay lai test.
 
 `git status --short` truoc khi sua tai lieu cho thay co san cac thay doi chua commit:
 
-- Modified: `deploy/docker-compose.yml`
 - Modified: `eval/rag_eval_latest.json`
 - Modified: `src/rag_chatbox/config.py`
 - Modified: `src/rag_chatbox/prompt_template.py`
@@ -294,7 +275,6 @@ Can review ky truoc khi commit de khong tron thay doi code, deploy va eval outpu
 - Co ONNX export va artifact contract cho reader.
 - Retrieval co manifest/cache, threshold, fallback va debug trace.
 - Citation co allowed-source filtering de giam cite sai context.
-- Docker topology phu hop cach tach offline indexer, reader service va synthesis service.
 - Co unit tests cho nhieu phan quan trong: training, export artifact, reader, retrieval, RAG pipeline va service import.
 
 ## 15. Rui ro va diem can cai thien
@@ -305,7 +285,7 @@ Can review ky truoc khi commit de khong tron thay doi code, deploy va eval outpu
 - Eval RAG phu thuoc Ollama local nen toc do va timeout co the khong on dinh giua cac may.
 - `.gitignore` ignore `tests/`; neu them test moi co the bi bo sot khi commit.
 - CI/eval yeu cau artifact va tai lieu phu hop ton tai trong workspace; may moi can fetch artifact/cache/PDF truoc.
-- `.env` va `.env.deploy` la file local, khong nen commit.
+- `.env` la file local, khong nen commit.
 
 ## 16. Uu tien tiep theo
 

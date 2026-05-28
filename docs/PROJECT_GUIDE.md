@@ -97,12 +97,6 @@ Tập hợp các module cốt lõi để vận hành chatbot thông minh.
 Monorepo-RAG-Fine-tuning/
 ├── config/
 │   └── defaults.yaml             # Cấu hình huấn luyện mặc định cho DistilBERT
-├── deploy/                       # Cấu hình đóng gói Docker và deploy
-│   ├── indexer/                  # Dockerfile phục vụ build FAISS index offline
-│   ├── reader/                   # Dockerfile phục vụ API trích xuất câu trả lời
-│   ├── synthesis/                # Dockerfile phục vụ API tổng hợp câu trả lời (LLM)
-│   ├── docker-compose.yml        # Docker compose phân tách các service chạy mạng Host
-│   └── README.md                 # Tài liệu hướng dẫn deploy Docker
 ├── docs/
 │   └── PROJECT_GUIDE.md          # Tài liệu hướng dẫn kỹ thuật chi tiết (Tệp này)
 ├── eval/                         # Phân hệ đánh giá hiệu năng
@@ -131,7 +125,6 @@ Monorepo-RAG-Fine-tuning/
 │       └── retrieval.py          # Tìm kiếm FAISS + Reranking + Overlap Score
 ├── tests/                        # Hệ thống Unit Tests (31 tests) bao phủ 100% logic cốt lõi
 ├── .env.example                  # File cấu hình biến môi trường mẫu cục bộ
-├── .env.deploy.example           # File cấu hình biến môi trường mẫu phục vụ Docker
 ├── pyproject.toml                # Khai báo dependencies và CLI entrypoints
 └── REVIEWS.md                    # Nhật ký review dự án gốc
 ```
@@ -176,7 +169,7 @@ Monorepo-RAG-Fine-tuning/
 
 ## 5. Hướng Dẫn Vận Hành Hệ Thống (Running & Serving Guide)
 
-Dự án hỗ trợ cả hai phương thức chạy: **Cục bộ trực tiếp trên host (WSL)** và **Đóng gói container (Docker)**.
+Dự án hiện tập trung vào phương thức chạy **cục bộ trực tiếp trên host (WSL/Linux)**.
 
 ### A. Phương thức 1: Chạy cục bộ trực tiếp trên Host (Khuyến nghị cho phát triển)
 
@@ -205,38 +198,6 @@ Mở hai cửa sổ terminal riêng biệt và kích hoạt môi trường ảo:
   rag-synthesis-service
   ```
   *(Hoặc: `python3 -m rag_chatbox.services.synthesis_service`)*
-
----
-
-### B. Phương thức 2: Đóng gói và Deploy bằng Docker Compose
-
-Để giải quyết triệt để vấn đề kết nối giữa các container và Ollama chạy cục bộ trên máy host (do tường lửa Windows Defender chặn kết nối giữa các máy ảo WSL khác hệ thống), dự án sử dụng cấu hình **mạng Host (`network_mode: "host"`)**.
-
-#### 1. Đồng bộ cấu hình triển khai:
-```bash
-cp .env.deploy.example .env.deploy
-```
-
-#### 2. Khởi tạo FAISS Index (Chạy cục bộ trên WSL để đồng bộ volume):
-```bash
-python3 -m rag_chatbox.services.indexer_job --print-summary
-```
-*(Cơ sở dữ liệu vector lưu trong `.cache/faiss` sẽ được mount trực tiếp vào container thông qua volume).*
-
-#### 3. Khởi động các Service bằng Docker Compose:
-```bash
-docker compose -f deploy/docker-compose.yml up --build
-```
-Hệ thống sẽ chạy Reader Service trên cổng `8081` và Synthesis Service trên cổng `8080`.
-
-#### 4. Thử nghiệm gọi API cURL:
-```bash
-curl -X POST http://localhost:8080/v1/chat/ask \
-  -H "Content-Type: application/json" \
-  -d '{"question": "RAG là gì và mục tiêu chính của kiến trúc này là gì?"}'
-```
-
----
 
 ## 6. Phân Hệ Đánh Giá & Các Tối Ưu Hóa Hiệu Năng (Evaluation & Optimizations)
 
@@ -280,7 +241,7 @@ Trong quá trình phát triển, chúng tôi đã phát hiện và triển khai 
 1. **Không commit các tệp tin lớn**:
    - Không đưa các tệp PDF tài liệu trong `paper/` lên git.
    - Không commit các tệp mô hình ONNX, checkpoint huấn luyện trong `outputs/checkpoints/` và các artifact trong `artifacts/`.
-   - Không commit tệp cấu hình thực tế chứa thông tin nhạy cảm `.env` và `.env.deploy`.
+   - Không commit tệp cấu hình thực tế chứa thông tin nhạy cảm `.env`.
 2. **Quy trình đồng bộ**:
    - Sử dụng các lệnh shell script trong `scripts/` (ví dụ: `fetch_artifacts.sh`) để kéo các tài liệu và mô hình lớn từ S3/Object Storage về local khi bắt đầu thiết lập dự án trên máy mới.
 3. **Quy tắc Git**:
