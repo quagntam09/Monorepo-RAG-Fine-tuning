@@ -86,8 +86,8 @@ class TrainingConfig:
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> "TrainingConfig":
-        """Load config từ file YAML."""
-        data = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
+        """Load config từ file YAML, hỗ trợ kế thừa bằng key `base`."""
+        data = _load_yaml_with_base(Path(path))
         valid_keys = cls.__dataclass_fields__.keys()
         filtered = {k: v for k, v in data.items() if k in valid_keys}
         return cls(**filtered)
@@ -99,3 +99,32 @@ class TrainingConfig:
             yaml.dump(data=dataclasses.asdict(self), allow_unicode=True, sort_keys=False),
             encoding="utf-8",
         )
+
+
+def _load_yaml_with_base(path: Path, seen: set[Path] | None = None) -> dict:
+    path = path.resolve()
+    seen = set(seen or set())
+    if path in seen:
+        raise ValueError(f"Detected circular config base reference: {path}")
+    seen.add(path)
+
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        if not isinstance(data, dict):
+            raise ValueError(f"Training config must be a YAML mapping: {path}")
+
+        base_value = data.pop("base", None)
+        if base_value is None:
+            return data
+
+        base_paths = base_value if isinstance(base_value, list) else [base_value]
+        merged: dict = {}
+        for base_path in base_paths:
+            resolved_base = Path(base_path)
+            if not resolved_base.is_absolute():
+                resolved_base = path.parent / resolved_base
+            merged.update(_load_yaml_with_base(resolved_base, seen=seen))
+        merged.update(data)
+        return merged
+    finally:
+        seen.remove(path)

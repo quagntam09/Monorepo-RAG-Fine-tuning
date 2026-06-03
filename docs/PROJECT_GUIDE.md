@@ -97,11 +97,12 @@ Tập hợp các module cốt lõi để vận hành chatbot thông minh.
 ```text
 Monorepo-RAG-Fine-tuning/
 ├── config/
-│   ├── defaults.yaml             # Cấu hình huấn luyện mặc định cho DistilBERT
-│   ├── stage1_mixed_en_vi.yaml   # Cấu hình Stage 1 mixed EN+VI
-│   ├── stage2_vi_refine.yaml     # Cấu hình Stage 2 refine trên VI
-│   ├── eval_en.yaml              # Cấu hình benchmark tiếng Anh
-│   └── eval_vi.yaml              # Cấu hình benchmark tiếng Việt
+│   ├── defaults.yaml             # Cấu hình chung cho train/eval DistilBERT
+│   ├── prepare_multilingual_qa.yaml # Cấu hình nguồn dữ liệu + kích thước split
+│   ├── stage1_mixed_en_vi.yaml   # Override Stage 1 mixed EN+VI
+│   ├── stage2_vi_refine.yaml     # Override Stage 2 refine trên VI
+│   ├── eval_en.yaml              # Override benchmark tiếng Anh
+│   └── eval_vi.yaml              # Override benchmark tiếng Việt
 ├── data/
 │   └── qa_multilingual/          # Dữ liệu JSONL cho Stage 1/Stage 2/eval EN-VI
 ├── docs/

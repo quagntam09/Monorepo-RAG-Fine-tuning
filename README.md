@@ -138,6 +138,7 @@ python scripts/prepare_multilingual_qa.py --config config/prepare_multilingual_q
 ```
 
 Các tham số dataset/size nằm trong `config/prepare_multilingual_qa.yaml`.
+Các config train/eval kế thừa cấu hình chung từ `config/defaults.yaml`, nên file Stage/Eval chỉ chứa phần khác biệt.
 
 Script tạo các file:
 - `data/qa_multilingual/stage1_train.jsonl`
