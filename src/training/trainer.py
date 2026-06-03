@@ -15,6 +15,7 @@ import json
 import logging
 import random
 from pathlib import Path
+from typing import Any
 
 import torch
 import numpy as np
@@ -106,6 +107,87 @@ def _load_initial_checkpoint_if_configured(model, config: TrainingConfig) -> str
     state_dict = _safe_load_state_dict(checkpoint_file)
     model.load_state_dict(state_dict, strict=True)
     return str(checkpoint_dir)
+
+
+def _span_exact_match(outputs, batch: dict) -> tuple[int, int]:
+    """Return count of QA spans where both start and end positions are correct."""
+    if "start_positions" not in batch or "end_positions" not in batch:
+        return 0, 0
+
+    start_pred = outputs.start_logits.argmax(dim=-1)
+    end_pred = outputs.end_logits.argmax(dim=-1)
+    matches = (
+        (start_pred == batch["start_positions"])
+        & (end_pred == batch["end_positions"])
+    )
+    return int(matches.sum().item()), int(batch["start_positions"].size(dim=0))
+
+
+def _write_training_history(output_dir: Path, history: list[dict[str, Any]]) -> Path:
+    history_path = output_dir / "training_history.json"
+    history_path.write_text(
+        json.dumps(history, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    return history_path
+
+
+def _plot_training_history(output_dir: Path, history: list[dict[str, Any]]) -> Path | None:
+    """Save loss/metric curves. Plotting is optional so training still finishes without matplotlib."""
+    if not history:
+        return None
+
+    try:
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        logger.warning("Không thể vẽ biểu đồ vì thiếu matplotlib. Cài bằng: pip install matplotlib")
+        return None
+
+    epochs = [row["epoch"] for row in history]
+    plot_path = output_dir / "training_curves.png"
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+    loss_ax, metric_ax = axes
+
+    loss_ax.plot(epochs, [row["train_loss"] for row in history], marker="o", label="Train loss")
+    valid_losses = [row.get("valid_loss") for row in history]
+    if any(value is not None for value in valid_losses):
+        loss_ax.plot(epochs, valid_losses, marker="o", label="Validation loss")
+    loss_ax.set_title("Loss")
+    loss_ax.set_xlabel("Epoch")
+    loss_ax.set_ylabel("Loss")
+    loss_ax.grid(True, alpha=0.3)
+    loss_ax.legend()
+
+    metric_series = [
+        ("train_span_exact_match", "Train accuracy"),
+        ("valid_span_exact_match", "Validation accuracy"),
+        ("exact_match", "Validation EM"),
+        ("f1", "Validation F1"),
+    ]
+    for key, label in metric_series:
+        values = []
+        for row in history:
+            value = row.get(key)
+            if value is not None and key in {"exact_match", "f1"} and float(value) > 1.0:
+                value = float(value) / 100.0
+            values.append(value)
+        if any(value is not None for value in values):
+            metric_ax.plot(epochs, values, marker="o", label=label)
+    metric_ax.set_title("Accuracy / EM / F1")
+    metric_ax.set_xlabel("Epoch")
+    metric_ax.set_ylabel("Score")
+    metric_ax.set_ylim(0.0, 1.0)
+    metric_ax.grid(True, alpha=0.3)
+    metric_ax.legend()
+
+    fig.tight_layout()
+    fig.savefig(plot_path, dpi=160)
+    plt.close(fig)
+    return plot_path
 
 
 def _build_validation_eval_inputs(
@@ -256,7 +338,7 @@ def _run_em_f1_validation(
     return compute_metrics(eval_preds)
 
 
-def train(config: TrainingConfig) -> dict[str, float | str]:
+def train(config: TrainingConfig) -> dict[str, float | str | None]:
     """
     Main training loop.
 
@@ -401,6 +483,9 @@ def train(config: TrainingConfig) -> dict[str, float | str]:
     best_metric_value = float("-inf") if greater_is_better else float("inf")
     best_path = output_dir / "best_model"
     global_step = 0
+    history: list[dict[str, Any]] = []
+    history_path = output_dir / "training_history.json"
+    curves_path: Path | None = None
 
     for epoch in range(1, config.epochs + 1):
         logger.info(f"\nEpoch {epoch}/{config.epochs}")
@@ -408,6 +493,8 @@ def train(config: TrainingConfig) -> dict[str, float | str]:
         # Training
         model.train()
         train_loss = 0.0
+        train_exact = 0
+        train_total = 0
         optimizer.zero_grad(set_to_none=True)
 
         for step, batch in enumerate(train_loader, start=1):
@@ -421,6 +508,9 @@ def train(config: TrainingConfig) -> dict[str, float | str]:
 
             scaler.scale(loss).backward()
             train_loss += outputs.loss.item()
+            exact_count, batch_total = _span_exact_match(outputs=outputs, batch=batch)
+            train_exact += exact_count
+            train_total += batch_total
 
             if step % grad_accum_steps == 0 or step == len(train_loader):
                 scaler.unscale_(optimizer)
@@ -445,13 +535,29 @@ def train(config: TrainingConfig) -> dict[str, float | str]:
                 optimizer.zero_grad(set_to_none=True)
 
         avg_train_loss = train_loss / len(train_loader)
+        train_span_exact_match = train_exact / max(1, train_total)
         logger.info(f"Train Loss: {avg_train_loss:.4f}")
+        logger.info(f"Train Span Accuracy: {train_span_exact_match:.4f}")
+
+        epoch_record: dict[str, Any] = {
+            "epoch": epoch,
+            "global_step": global_step,
+            "learning_rate": float(scheduler.get_last_lr()[0]),
+            "train_loss": float(avg_train_loss),
+            "train_span_exact_match": float(train_span_exact_match),
+            "valid_loss": None,
+            "valid_span_exact_match": None,
+            "exact_match": None,
+            "f1": None,
+        }
 
         # Validation
         if valid_loader:
             model.eval()
             valid_loss = 0.0
             valid_steps = 0
+            valid_exact = 0
+            valid_total = 0
 
             with torch.no_grad():
                 for batch in valid_loader:
@@ -462,6 +568,9 @@ def train(config: TrainingConfig) -> dict[str, float | str]:
                     if outputs.loss is not None:
                         valid_loss += outputs.loss.item()
                         valid_steps += 1
+                    exact_count, batch_total = _span_exact_match(outputs=outputs, batch=batch)
+                    valid_exact += exact_count
+                    valid_total += batch_total
 
             epoch_metrics = None
             if validation_eval_inputs is not None:
@@ -477,10 +586,16 @@ def train(config: TrainingConfig) -> dict[str, float | str]:
                     epoch_metrics.get("exact_match", 0.0),
                     epoch_metrics.get("f1", 0.0),
                 )
+                epoch_record["exact_match"] = float(epoch_metrics.get("exact_match", 0.0))
+                epoch_record["f1"] = float(epoch_metrics.get("f1", 0.0))
 
             if valid_steps > 0:
                 avg_valid_loss = valid_loss / valid_steps
+                valid_span_exact_match = valid_exact / max(1, valid_total)
                 logger.info(f"Valid Loss: {avg_valid_loss:.4f}")
+                logger.info(f"Valid Span Accuracy: {valid_span_exact_match:.4f}")
+                epoch_record["valid_loss"] = float(avg_valid_loss)
+                epoch_record["valid_span_exact_match"] = float(valid_span_exact_match)
 
                 # Save best model by configured metric.
                 if config.save_best_model and epoch_metrics is not None:
@@ -503,6 +618,10 @@ def train(config: TrainingConfig) -> dict[str, float | str]:
             else:
                 logger.info("Valid Loss: unavailable (validation dataset has no labels or loss was not computed). Skipping best-model selection.")
 
+        history.append(epoch_record)
+        history_path = _write_training_history(output_dir=output_dir, history=history)
+        logger.info("Training history saved to %s", history_path)
+
         # Save checkpoint
         checkpoint_path = output_dir / f"checkpoint-epoch-{epoch}"
         checkpoint_path.mkdir(exist_ok=True)
@@ -516,6 +635,10 @@ def train(config: TrainingConfig) -> dict[str, float | str]:
             model.load_state_dict(_safe_load_state_dict(checkpoint_file))
             logger.info("Best model loaded at end from %s", best_path)
 
+    curves_path = _plot_training_history(output_dir=output_dir, history=history)
+    if curves_path is not None:
+        logger.info("Training curves saved to %s", curves_path)
+
     logger.info("\nTraining completed!")
     return {
         "best_model_path": str(best_path),
@@ -523,4 +646,6 @@ def train(config: TrainingConfig) -> dict[str, float | str]:
         "best_metric_value": float(best_metric_value),
         "output_dir": str(output_dir),
         "init_checkpoint_dir": init_checkpoint_used,
+        "training_history_path": str(history_path),
+        "training_curves_path": str(curves_path) if curves_path is not None else None,
     }

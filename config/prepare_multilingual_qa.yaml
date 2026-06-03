@@ -1,0 +1,16 @@
+en_dataset: rajpurkar/squad
+en_dataset_config: ""
+vi_dataset: taidng/UIT-ViQuAD2.0
+vi_dataset_config: ""
+output_dir: data/qa_multilingual
+cache_dir: ""
+seed: 42
+validation_ratio: 0.1
+stage1_vi_ratio: 0.5
+stage1_train_size: 30000
+stage1_validation_size: 4000
+stage2_train_size: 20000
+stage2_validation_size: 5000
+eval_en_size: 3000
+eval_vi_size: 3000
+allow_oversample: false

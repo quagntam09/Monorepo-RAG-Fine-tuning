@@ -134,11 +134,10 @@ Pipeline fine-tuning khuyến nghị:
 
 ### A. Chuẩn bị dữ liệu local JSONL
 ```bash
-python scripts/prepare_multilingual_qa.py \
-  --output-dir data/qa_multilingual \
-  --stage1-vi-ratio 0.5 \
-  --stage1-validation-size 4000
+python scripts/prepare_multilingual_qa.py --config config/prepare_multilingual_qa.yaml
 ```
+
+Các tham số dataset/size nằm trong `config/prepare_multilingual_qa.yaml`.
 
 Script tạo các file:
 - `data/qa_multilingual/stage1_train.jsonl`
@@ -174,6 +173,33 @@ rag-ft-export \
   --artifact-dir artifacts/readers/run_best
 ```
 
+### E. So sánh thêm DistilRoBERTa + TinyBERT (luồng tách riêng)
+Pipeline so sánh 2 model bổ sung được đặt trong:
+```text
+experiments/model_compare/
+```
+
+Chạy train Stage 1/Stage 2 cho DistilRoBERTa:
+```bash
+python experiments/model_compare/train_autoqa.py \
+  --config experiments/model_compare/configs/distilroberta_stage1.yaml
+python experiments/model_compare/train_autoqa.py \
+  --config experiments/model_compare/configs/distilroberta_stage2_vi.yaml
+```
+
+Chạy train Stage 1/Stage 2 cho TinyBERT:
+```bash
+python experiments/model_compare/train_autoqa.py \
+  --config experiments/model_compare/configs/tinybert_stage1.yaml
+python experiments/model_compare/train_autoqa.py \
+  --config experiments/model_compare/configs/tinybert_stage2_vi.yaml
+```
+
+Hướng dẫn eval + tổng hợp so sánh 3 model nằm trong:
+```text
+experiments/model_compare/README.md
+```
+
 ---
 
 ## 📊 6. Hệ Thống Đánh Giá Tự Động (Evaluation)
@@ -203,6 +229,7 @@ data/        # Dữ liệu QA local đã chuẩn hóa (stage1/stage2/eval)
 docs/        # Tài liệu hướng dẫn kỹ thuật chi tiết của hệ thống
 eval/        # Tập dữ liệu kiểm thử vàng và lịch sử kết quả đánh giá
 scripts/     # Script chuẩn bị dữ liệu QA và đồng bộ artifacts
+experiments/ # Luồng thử nghiệm tách riêng để so sánh model fine-tuning
 src/         # Mã nguồn chính (training/ và rag_chatbox/)
 tests/       # Hệ thống kiểm thử tự động (Unit Tests)
 paper/       # PDF tài liệu đầu vào (Local - không commit git)

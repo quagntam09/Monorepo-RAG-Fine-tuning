@@ -8,6 +8,7 @@ import random
 from pathlib import Path
 from typing import Any
 
+import yaml
 from datasets import Dataset, DatasetDict, load_dataset
 
 
@@ -15,6 +16,58 @@ DATASET_ALIASES = {
     "squad": "rajpurkar/squad",
     "squad_v2": "rajpurkar/squad_v2",
 }
+
+DEFAULT_PREPARE_CONFIG = {
+    "en_dataset": "rajpurkar/squad",
+    "en_dataset_config": "",
+    "vi_dataset": "taidng/UIT-ViQuAD2.0",
+    "vi_dataset_config": "",
+    "output_dir": "data/qa_multilingual",
+    "cache_dir": "",
+    "seed": 42,
+    "validation_ratio": 0.1,
+    "stage1_vi_ratio": 0.5,
+    "stage1_train_size": 0,
+    "stage1_validation_size": 4000,
+    "stage2_train_size": 0,
+    "stage2_validation_size": 0,
+    "eval_en_size": 0,
+    "eval_vi_size": 0,
+    "allow_oversample": False,
+}
+
+
+def _resolve_repo_path(path: str | Path) -> Path:
+    resolved = Path(path)
+    if resolved.is_absolute():
+        return resolved
+    return Path(__file__).resolve().parents[1] / resolved
+
+
+def _load_prepare_config(config_path: str | Path) -> dict[str, Any]:
+    config = dict(DEFAULT_PREPARE_CONFIG)
+    path = _resolve_repo_path(config_path)
+    if not path.exists():
+        return config
+
+    raw_config = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(raw_config, dict):
+        raise ValueError(f"Prepare config must be a YAML mapping: {path}")
+
+    unknown_keys = sorted(set(raw_config) - set(DEFAULT_PREPARE_CONFIG))
+    if unknown_keys:
+        raise ValueError(f"Unknown prepare config keys in {path}: {unknown_keys}")
+
+    config.update(raw_config)
+    return config
+
+
+def _apply_cli_overrides(config: dict[str, Any], args: argparse.Namespace) -> argparse.Namespace:
+    for key, value in vars(args).items():
+        if key == "config" or value is None:
+            continue
+        config[key] = value
+    return argparse.Namespace(**config)
 
 
 def _normalize_dataset_id(dataset_id: str) -> str:
@@ -178,23 +231,27 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Prepare multilingual QA JSONL files for stage-1 mixed and stage-2 VI fine-tuning."
     )
-    parser.add_argument("--en-dataset", default="rajpurkar/squad")
-    parser.add_argument("--en-dataset-config", default="")
-    parser.add_argument("--vi-dataset", default="taidng/UIT-ViQuAD2.0")
-    parser.add_argument("--vi-dataset-config", default="")
-    parser.add_argument("--output-dir", default="data/qa_multilingual")
-    parser.add_argument("--cache-dir", default="")
-    parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--validation-ratio", type=float, default=0.1)
-    parser.add_argument("--stage1-vi-ratio", type=float, default=0.5)
-    parser.add_argument("--stage1-train-size", type=int, default=0)
-    parser.add_argument("--stage1-validation-size", type=int, default=4000)
-    parser.add_argument("--stage2-train-size", type=int, default=0)
-    parser.add_argument("--stage2-validation-size", type=int, default=0)
-    parser.add_argument("--eval-en-size", type=int, default=0)
-    parser.add_argument("--eval-vi-size", type=int, default=0)
-    parser.add_argument("--allow-oversample", action="store_true")
-    return parser.parse_args()
+    parser.add_argument("--config", default="config/prepare_multilingual_qa.yaml")
+    parser.add_argument("--en-dataset", default=None)
+    parser.add_argument("--en-dataset-config", default=None)
+    parser.add_argument("--vi-dataset", default=None)
+    parser.add_argument("--vi-dataset-config", default=None)
+    parser.add_argument("--output-dir", default=None)
+    parser.add_argument("--cache-dir", default=None)
+    parser.add_argument("--seed", type=int, default=None)
+    parser.add_argument("--validation-ratio", type=float, default=None)
+    parser.add_argument("--stage1-vi-ratio", type=float, default=None)
+    parser.add_argument("--stage1-train-size", type=int, default=None)
+    parser.add_argument("--stage1-validation-size", type=int, default=None)
+    parser.add_argument("--stage2-train-size", type=int, default=None)
+    parser.add_argument("--stage2-validation-size", type=int, default=None)
+    parser.add_argument("--eval-en-size", type=int, default=None)
+    parser.add_argument("--eval-vi-size", type=int, default=None)
+    parser.add_argument("--allow-oversample", action=argparse.BooleanOptionalAction, default=None)
+
+    args = parser.parse_args()
+    config = _load_prepare_config(args.config)
+    return _apply_cli_overrides(config=config, args=args)
 
 
 def main() -> None:

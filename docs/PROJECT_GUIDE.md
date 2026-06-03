@@ -132,6 +132,8 @@ Monorepo-RAG-Fine-tuning/
 │       └── retrieval.py          # Tìm kiếm FAISS + Reranking + Overlap Score
 ├── scripts/
 │   └── prepare_multilingual_qa.py # Script chuẩn hóa + trộn dữ liệu QA EN/VI
+├── experiments/
+│   └── model_compare/             # Luồng fine-tuning tách riêng để so sánh DistilRoBERTa/TinyBERT
 ├── tests/                        # Hệ thống Unit Tests
 ├── .env.example                  # File cấu hình biến môi trường mẫu cục bộ
 ├── pyproject.toml                # Khai báo dependencies và CLI entrypoints
@@ -212,9 +214,7 @@ Mở hai cửa sổ terminal riêng biệt và kích hoạt môi trường ảo:
 
 #### 1. Chuẩn bị dữ liệu JSONL chuẩn hóa:
 ```bash
-python scripts/prepare_multilingual_qa.py \
-  --output-dir data/qa_multilingual \
-  --stage1-vi-ratio 0.5
+python scripts/prepare_multilingual_qa.py --config config/prepare_multilingual_qa.yaml
 ```
 
 #### 2. Stage 1 - Mixed EN+VI:
@@ -240,6 +240,26 @@ rag-ft-export \
   --config config/stage2_vi_refine.yaml \
   --checkpoint-dir outputs/checkpoints_stage2_vi/best_model \
   --artifact-dir artifacts/readers/run_best
+```
+
+### C. So sánh thêm DistilRoBERTa và TinyBERT (thư mục tách riêng)
+Để không ảnh hưởng luồng train chính của dự án, pipeline so sánh đặt tại:
+```text
+experiments/model_compare/
+```
+
+Ví dụ chạy DistilRoBERTa và TinyBERT:
+```bash
+python experiments/model_compare/train_autoqa.py --config experiments/model_compare/configs/distilroberta_stage1.yaml
+python experiments/model_compare/train_autoqa.py --config experiments/model_compare/configs/distilroberta_stage2_vi.yaml
+
+python experiments/model_compare/train_autoqa.py --config experiments/model_compare/configs/tinybert_stage1.yaml
+python experiments/model_compare/train_autoqa.py --config experiments/model_compare/configs/tinybert_stage2_vi.yaml
+```
+
+Các bước eval EN/VI và script tổng hợp so sánh 3 model được mô tả trong:
+```text
+experiments/model_compare/README.md
 ```
 
 ## 6. Phân Hệ Đánh Giá & Các Tối Ưu Hóa Hiệu Năng (Evaluation & Optimizations)
