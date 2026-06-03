@@ -1,7 +1,11 @@
-from dataclasses import dataclass
-import os
+from __future__ import annotations
 
-from dotenv import load_dotenv
+import dataclasses
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import yaml
 
 
 @dataclass(frozen=True)
@@ -34,6 +38,10 @@ class AppConfig:
     reader_n_best_size: int = 20
     reader_min_span_score: float = 0.0
     reader_require_metadata: bool = True
+    reader_service_url: str = "http://localhost:8081"
+    reader_service_timeout_sec: float = 30.0
+    reader_service_max_batch_size: int = 16
+    reader_service_batch_timeout_ms: int = 20
     clean_pdf_text: bool = True
     token_aware_chunking: bool = False
     tokenizer_model: str = "distilbert-base-multilingual-cased"
@@ -44,110 +52,74 @@ class AppConfig:
         return self.reader_artifact_dir
 
 
-def _env_int(name: str, default: int) -> int:
-    raw = os.getenv(name)
-    if raw is None:
-        return default
-    try:
-        return int(raw)
-    except ValueError as exc:
-        raise ValueError(f"Environment variable {name} must be an integer, got: {raw!r}") from exc
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[2]
 
 
-def _env_float(name: str, default: float) -> float:
-    raw = os.getenv(name)
-    if raw is None:
-        return default
-    try:
-        return float(raw)
-    except ValueError as exc:
-        raise ValueError(f"Environment variable {name} must be a float, got: {raw!r}") from exc
+def _resolve_config_path(path: str | Path | None) -> Path:
+    if path is None:
+        return _repo_root() / "config" / "rag_config.yaml"
+    resolved = Path(path)
+    if resolved.is_absolute():
+        return resolved
+    return _repo_root() / resolved
 
 
-def _env_bool(name: str, default: bool) -> bool:
-    raw = os.getenv(name)
-    if raw is None:
-        return default
+def _read_yaml_config(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        raise FileNotFoundError(f"RAG config file not found: {path}")
 
-    normalized = raw.strip().lower()
-    if normalized in {"1", "true", "yes", "y", "on"}:
-        return True
-    if normalized in {"0", "false", "no", "n", "off"}:
-        return False
-    raise ValueError(f"Environment variable {name} must be a boolean, got: {raw!r}")
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(data, dict):
+        raise ValueError(f"RAG config must be a YAML mapping: {path}")
+
+    valid_keys = {field.name for field in dataclasses.fields(AppConfig)}
+    unknown_keys = sorted(set(data) - valid_keys)
+    if unknown_keys:
+        raise ValueError(f"Unknown RAG config keys in {path}: {unknown_keys}")
+
+    return data
 
 
-def load_config() -> AppConfig:
-    load_dotenv()
+def _build_config(data: dict[str, Any]) -> AppConfig:
+    config = AppConfig(**data)
 
-    chunk_size = _env_int("RAG_CHUNK_SIZE", 1200)
-    chunk_overlap = _env_int("RAG_CHUNK_OVERLAP", 200)
-    if chunk_size <= 0:
-        raise ValueError("RAG_CHUNK_SIZE must be > 0")
-    if chunk_overlap < 0:
-        raise ValueError("RAG_CHUNK_OVERLAP must be >= 0")
-    if chunk_overlap >= chunk_size:
-        raise ValueError("RAG_CHUNK_OVERLAP must be smaller than RAG_CHUNK_SIZE")
+    if config.chunk_size <= 0:
+        raise ValueError("chunk_size must be > 0")
+    if config.chunk_overlap < 0:
+        raise ValueError("chunk_overlap must be >= 0")
+    if config.chunk_overlap >= config.chunk_size:
+        raise ValueError("chunk_overlap must be smaller than chunk_size")
 
-    top_k = _env_int("RAG_TOP_K", 5)
-    fetch_k = _env_int("RAG_FETCH_K", 20)
-    if top_k <= 0:
-        raise ValueError("RAG_TOP_K must be > 0")
-    if fetch_k <= 0:
-        raise ValueError("RAG_FETCH_K must be > 0")
-    if fetch_k < top_k:
-        fetch_k = top_k
-    query_rewrite_max_variants = _env_int("RAG_QUERY_REWRITE_MAX_VARIANTS", 3)
-    if query_rewrite_max_variants < 0:
-        raise ValueError("RAG_QUERY_REWRITE_MAX_VARIANTS must be >= 0")
-    query_rewrite_cache_ttl_sec = _env_float("RAG_QUERY_REWRITE_CACHE_TTL_SEC", 30.0)
-    retrieval_cache_ttl_sec = _env_float("RAG_RETRIEVAL_CACHE_TTL_SEC", 15.0)
-    query_rewrite_cache_max_size = _env_int("RAG_QUERY_REWRITE_CACHE_MAX_SIZE", 512)
-    retrieval_cache_max_size = _env_int("RAG_RETRIEVAL_CACHE_MAX_SIZE", 256)
-    if query_rewrite_cache_ttl_sec < 0:
-        raise ValueError("RAG_QUERY_REWRITE_CACHE_TTL_SEC must be >= 0")
-    if retrieval_cache_ttl_sec < 0:
-        raise ValueError("RAG_RETRIEVAL_CACHE_TTL_SEC must be >= 0")
-    if query_rewrite_cache_max_size <= 0:
-        raise ValueError("RAG_QUERY_REWRITE_CACHE_MAX_SIZE must be > 0")
-    if retrieval_cache_max_size <= 0:
-        raise ValueError("RAG_RETRIEVAL_CACHE_MAX_SIZE must be > 0")
-    fallback_min_relevance_score = _env_float("RAG_FALLBACK_MIN_RELEVANCE_SCORE", 0.0)
+    if config.top_k <= 0:
+        raise ValueError("top_k must be > 0")
+    if config.fetch_k <= 0:
+        raise ValueError("fetch_k must be > 0")
 
-    return AppConfig(
-        data_dir=os.getenv("RAG_DATA_DIR", "./paper"),
-        file_glob=os.getenv("RAG_FILE_GLOB", "**/*.pdf"),
-        faiss_index_dir=os.getenv("RAG_FAISS_INDEX_DIR", "./.cache/faiss"),
-        embedding_model=os.getenv("RAG_EMBEDDING_MODEL", "bge-m3"),
-        ollama_base_url=os.getenv("RAG_OLLAMA_BASE_URL", os.getenv("OLLAMA_HOST", "http://localhost:11434")),
-        llm_model=os.getenv("RAG_LLM_MODEL", "qwen2.5:0.5b"),
-        temperature=_env_float("RAG_TEMPERATURE", 0.2),
-        chunk_size=chunk_size,
-        chunk_overlap=chunk_overlap,
-        top_k=top_k,
-        fetch_k=fetch_k,
-        score_threshold=_env_float("RAG_SCORE_THRESHOLD", 0.35),
-        fallback_to_top_k_when_no_threshold_hit=_env_bool("RAG_FALLBACK_TO_TOP_K_WHEN_NO_THRESHOLD_HIT", True),
-        fallback_min_relevance_score=fallback_min_relevance_score,
-        query_rewrite_enabled=_env_bool("RAG_QUERY_REWRITE_ENABLED", False),
-        query_rewrite_model=os.getenv("RAG_QUERY_REWRITE_MODEL", os.getenv("RAG_LLM_MODEL", "qwen2.5:0.5b")),
-        query_rewrite_temperature=_env_float("RAG_QUERY_REWRITE_TEMPERATURE", 0.0),
-        query_rewrite_max_variants=query_rewrite_max_variants,
-        query_rewrite_cache_ttl_sec=query_rewrite_cache_ttl_sec,
-        query_rewrite_cache_max_size=query_rewrite_cache_max_size,
-        retrieval_cache_ttl_sec=retrieval_cache_ttl_sec,
-        retrieval_cache_max_size=retrieval_cache_max_size,
-        reader_artifact_dir=os.getenv(
-            "RAG_READER_ARTIFACT_DIR",
-            os.getenv("RAG_READER_MODEL_DIR", "./artifacts/readers/run_best"),
-        ),
-        reader_max_length=_env_int("RAG_READER_MAX_LENGTH", 384),
-        reader_max_answer_length=_env_int("RAG_READER_MAX_ANSWER_LENGTH", 30),
-        reader_n_best_size=_env_int("RAG_READER_N_BEST_SIZE", 20),
-        reader_min_span_score=_env_float("RAG_READER_MIN_SPAN_SCORE", 0.0),
-        reader_require_metadata=_env_bool("RAG_READER_REQUIRE_METADATA", True),
-        clean_pdf_text=_env_bool("RAG_CLEAN_PDF_TEXT", True),
-        token_aware_chunking=_env_bool("RAG_TOKEN_AWARE_CHUNKING", False),
-        tokenizer_model=os.getenv("RAG_TOKENIZER_MODEL", "distilbert-base-multilingual-cased"),
-        debug_trace=_env_bool("RAG_DEBUG_TRACE", False),
-    )
+    fetch_k = max(config.fetch_k, config.top_k)
+    if fetch_k != config.fetch_k:
+        config = dataclasses.replace(config, fetch_k=fetch_k)
+
+    if config.query_rewrite_max_variants < 0:
+        raise ValueError("query_rewrite_max_variants must be >= 0")
+    if config.query_rewrite_cache_ttl_sec < 0:
+        raise ValueError("query_rewrite_cache_ttl_sec must be >= 0")
+    if config.retrieval_cache_ttl_sec < 0:
+        raise ValueError("retrieval_cache_ttl_sec must be >= 0")
+    if config.query_rewrite_cache_max_size <= 0:
+        raise ValueError("query_rewrite_cache_max_size must be > 0")
+    if config.retrieval_cache_max_size <= 0:
+        raise ValueError("retrieval_cache_max_size must be > 0")
+    if config.reader_service_timeout_sec <= 0:
+        raise ValueError("reader_service_timeout_sec must be > 0")
+    if config.reader_service_max_batch_size <= 0:
+        raise ValueError("reader_service_max_batch_size must be > 0")
+    if config.reader_service_batch_timeout_ms <= 0:
+        raise ValueError("reader_service_batch_timeout_ms must be > 0")
+
+    return config
+
+
+def load_config(config_path: str | Path | None = None) -> AppConfig:
+    path = _resolve_config_path(config_path)
+    return _build_config(_read_yaml_config(path))

@@ -10,6 +10,7 @@ from .rag_pipeline import build_chatbot
 
 def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="RAG Chatbox CLI")
+    parser.add_argument("--config", default="config/rag_config.yaml", help="Path to RAG YAML config")
     parser.add_argument("--llm-model", dest="llm_model", type=str, help="Override LLM model name")
     parser.add_argument("--embedding-model", dest="embedding_model", type=str, help="Override embedding model name")
     parser.add_argument(
@@ -90,8 +91,8 @@ def _print_debug_trace(chatbot, question: str) -> None:
 def run_cli(argv: Sequence[str] | None = None) -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     args = _parse_args(argv)
-    config = load_config()
-    overrides = {k: v for k, v in vars(args).items() if v is not None}
+    config = load_config(args.config)
+    overrides = {k: v for k, v in vars(args).items() if k != "config" and v is not None}
     if overrides:
         config = replace(config, **overrides)
     chatbot = build_chatbot(config)

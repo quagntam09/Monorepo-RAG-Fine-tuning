@@ -1,0 +1,43 @@
+data_dir: ./paper
+file_glob: "**/*.pdf"
+faiss_index_dir: ./.cache/faiss
+
+embedding_model: bge-m3
+ollama_base_url: http://localhost:11434
+llm_model: qwen2.5:0.5b
+temperature: 0.2
+
+chunk_size: 1200
+chunk_overlap: 200
+clean_pdf_text: true
+token_aware_chunking: false
+tokenizer_model: distilbert-base-multilingual-cased
+
+top_k: 5
+fetch_k: 20
+score_threshold: 0.35
+fallback_to_top_k_when_no_threshold_hit: true
+fallback_min_relevance_score: 0.0
+retrieval_cache_ttl_sec: 15
+retrieval_cache_max_size: 256
+
+query_rewrite_enabled: false
+query_rewrite_model: qwen2.5:0.5b
+query_rewrite_temperature: 0.0
+query_rewrite_max_variants: 3
+query_rewrite_cache_ttl_sec: 30
+query_rewrite_cache_max_size: 512
+
+reader_artifact_dir: ./artifacts/readers/run_best
+reader_max_length: 384
+reader_max_answer_length: 30
+reader_n_best_size: 20
+reader_min_span_score: 0.0
+reader_require_metadata: true
+
+reader_service_url: http://localhost:8081
+reader_service_timeout_sec: 30
+reader_service_max_batch_size: 16
+reader_service_batch_timeout_ms: 20
+
+debug_trace: false

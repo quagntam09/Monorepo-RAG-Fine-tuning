@@ -329,6 +329,7 @@ def evaluate_eval_set(
 
 def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate the labeled RAG eval set")
+    parser.add_argument("--config", default="config/rag_config.yaml", help="Path to RAG YAML config")
     parser.add_argument("--eval-file", default="eval/questions.jsonl")
     parser.add_argument("--mode", choices=["reader", "rag"], default="rag")
     parser.add_argument("--top-k", type=int, default=5)
@@ -361,7 +362,7 @@ def _resolve_repo_path(path_str: str) -> Path:
 
 def main(argv: Sequence[str] | None = None) -> None:
     args = _parse_args(argv)
-    config = load_config()
+    config = load_config(args.config)
     eval_file = _resolve_repo_path(args.eval_file)
 
     result = evaluate_eval_set(

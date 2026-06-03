@@ -46,11 +46,6 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-Thiết lập file biến môi trường cục bộ:
-```bash
-cp .env.example .env
-```
-
 Chuẩn bị Ollama:
 ```bash
 ollama pull bge-m3
@@ -65,21 +60,21 @@ paper/
 
 ---
 
-## ⚙️ 3. Cấu Hình Quan Trọng (`.env`)
+## ⚙️ 3. Cấu Hình Quan Trọng (`config/rag_config.yaml`)
 
-Bạn có thể chỉnh sửa tệp `.env` để tối ưu các tham số của RAG:
+Bạn có thể chỉnh sửa `config/rag_config.yaml` để tối ưu các tham số của RAG:
 
-```bash
-RAG_DATA_DIR=./paper
-RAG_FILE_GLOB=**/*.pdf
-RAG_FAISS_INDEX_DIR=./.cache/faiss
-RAG_EMBEDDING_MODEL=bge-m3
-RAG_LLM_MODEL=qwen2.5:0.5b
-RAG_TOP_K=5
-RAG_FETCH_K=20
-RAG_SCORE_THRESHOLD=0.25 # Ngưỡng lọc độ tương đồng tối ưu
-RAG_READER_ARTIFACT_DIR=./artifacts/readers/run_best
-RAG_READER_SERVICE_URL=http://localhost:8081
+```yaml
+data_dir: ./paper
+file_glob: "**/*.pdf"
+faiss_index_dir: ./.cache/faiss
+embedding_model: bge-m3
+llm_model: qwen2.5:0.5b
+top_k: 5
+fetch_k: 20
+score_threshold: 0.35
+reader_artifact_dir: ./artifacts/readers/run_best
+reader_service_url: http://localhost:8081
 ```
 
 > [!IMPORTANT]

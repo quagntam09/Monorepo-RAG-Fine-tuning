@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
-import os
 from contextlib import asynccontextmanager
 from typing import Any, Sequence
 
@@ -60,8 +59,8 @@ def create_app() -> FastAPI:
             temperature=config.temperature,
             base_url=config.ollama_base_url,
         )
-        app.state.reader_service_url = os.getenv("RAG_READER_SERVICE_URL", "http://localhost:8081").rstrip("/")
-        app.state.timeout_sec = float(os.getenv("RAG_READER_SERVICE_TIMEOUT_SEC", "30"))
+        app.state.reader_service_url = config.reader_service_url.rstrip("/")
+        app.state.timeout_sec = float(config.reader_service_timeout_sec)
         yield
 
     app = FastAPI(title="RAG LLM Synthesis Service", version="1.0.0", lifespan=lifespan)

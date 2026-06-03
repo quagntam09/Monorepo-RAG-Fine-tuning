@@ -12,13 +12,14 @@ from rag_chatbox.retrieval import build_retriever
 
 def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Offline indexer job for FAISS retrieval index")
+    parser.add_argument("--config", default="config/rag_config.yaml", help="Path to RAG YAML config")
     parser.add_argument("--print-summary", action="store_true", help="Print indexing summary as JSON")
     return parser.parse_args(argv)
 
 
 def main(argv: Sequence[str] | None = None) -> None:
     args = _parse_args(argv)
-    config = load_config()
+    config = load_config(args.config)
 
     documents = load_documents(config)
     chunks = split_documents(documents, config)

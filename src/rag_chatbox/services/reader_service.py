@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
-import os
 from dataclasses import dataclass
 from contextlib import asynccontextmanager
 from typing import Any, Sequence
@@ -179,8 +178,8 @@ def create_app() -> FastAPI:
             require_metadata=config.reader_require_metadata,
         )
 
-        max_batch_size = int(os.getenv("READER_SERVICE_MAX_BATCH_SIZE", "16"))
-        batch_timeout_ms = int(os.getenv("READER_SERVICE_BATCH_TIMEOUT_MS", "20"))
+        max_batch_size = int(config.reader_service_max_batch_size)
+        batch_timeout_ms = int(config.reader_service_batch_timeout_ms)
         runner = _MicroBatchReaderRunner(reader=reader, max_batch_size=max_batch_size, batch_timeout_ms=batch_timeout_ms)
         runner.start()
 
